@@ -1,3 +1,9 @@
+# Compiled Typescript
+out
+
+# VS Code extension file
+*.vsix
+
 # Logs
 logs
 *.log

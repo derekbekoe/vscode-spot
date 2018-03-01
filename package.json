@@ -21,24 +21,30 @@
         "onCommand:spot.Disconnect",
         "onCommand:spot.Terminate"
     ],
-    "main": "./out/extension",
+    "main": "./out/src/extension",
     "contributes": {
-        "commands": [{
-            "command": "spot.Create",
-            "title": "Create a new spot"
-        },
-        {
-            "command": "spot.Connect",
-            "title": "Connect to a spot using the spot name and token"
-        },
-        {
-            "command": "spot.Disconnect",
-            "title": "Disconnect from a spot but keep it running"
-        },
-        {
-            "command": "spot.Terminate",
-            "title": "Terminate a spot"
-        }]
+        "commands": [
+            {
+                "command": "spot.Create",
+                "title": "Create",
+                "category": "Spot"
+            },
+            {
+                "command": "spot.Connect",
+                "title": "Connect",
+                "category": "Spot"
+            },
+            {
+                "command": "spot.Disconnect",
+                "title": "Disconnect",
+                "category": "Spot"
+            },
+            {
+                "command": "spot.Terminate",
+                "title": "Terminate",
+                "category": "Spot"
+            }
+        ]
     },
     "scripts": {
         "vscode:prepublish": "tsc -p ./",
@@ -56,8 +62,8 @@
         "mocha": "^5.0.1",
         "@types/node": "^9.4.6",
         "@types/mocha": "^2.2.48"
-   },
-   "dependencies": {
-		"vscode-extension-telemetry": "^0.0.15"
-	}
+    },
+    "dependencies": {
+        "vscode-extension-telemetry": "^0.0.15"
+    }
 }
