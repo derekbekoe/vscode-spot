@@ -3,6 +3,12 @@
     "description": "VS Code extension for the Spot service.",
     "version": "0.0.1",
     "publisher": "derek@derekbekoe.com",
+    "repository": {
+        "url": "https://github.com/derekbekoe/vscode-spot.git"
+    },
+    "homepage": "https://github.com/derekbekoe/vscode-spot/blob/master/README.md",
+    "license": "SEE LICENSE IN LICENSE.md",
+    "preview": true,
     "engines": {
         "vscode": "^1.20.0"
     },
@@ -10,13 +16,28 @@
         "Other"
     ],
     "activationEvents": [
-        "onCommand:extension.sayHello"
+        "onCommand:spot.Create",
+        "onCommand:spot.Connect",
+        "onCommand:spot.Disconnect",
+        "onCommand:spot.Terminate"
     ],
     "main": "./out/extension",
     "contributes": {
         "commands": [{
-            "command": "extension.sayHello",
-            "title": "Hello World"
+            "command": "spot.Create",
+            "title": "Create a new spot"
+        },
+        {
+            "command": "spot.Connect",
+            "title": "Connect to a spot using the spot name and token"
+        },
+        {
+            "command": "spot.Disconnect",
+            "title": "Disconnect from a spot but keep it running"
+        },
+        {
+            "command": "spot.Terminate",
+            "title": "Terminate a spot"
         }]
     },
     "scripts": {

@@ -13,4 +13,4 @@ VS Code extension for Spot.
 | `Spot: Terminate`  | Terminate a spot.
 
 ## License
-[MIT](LICENSE)
+[MIT](LICENSE.md)
