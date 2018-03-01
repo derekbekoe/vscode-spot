@@ -1,5 +1,5 @@
 {
-    "name": "spot",
+    "name": "vscode-spot",
     "description": "VS Code extension for the Spot service.",
     "version": "0.0.1",
     "publisher": "derek@derekbekoe.com",
@@ -34,7 +34,7 @@
         "vscode": "^1.1.10",
         "mocha": "^5.0.1",
         "@types/node": "^9.4.6",
-        "@types/mocha": "^5.0.1"
+        "@types/mocha": "^2.2.48"
    },
    "dependencies": {
 		"vscode-extension-telemetry": "^0.0.15"
