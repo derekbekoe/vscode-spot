@@ -1,5 +1,5 @@
 {
-    "name": "spot",
+    "name": "vscode-spot",
     "description": "VS Code extension for the Spot service.",
     "version": "0.0.1",
     "publisher": "derek@derekbekoe.com",
@@ -21,15 +21,22 @@
     },
     "scripts": {
         "vscode:prepublish": "tsc -p ./",
-        "compile": "tsc -watch -p ./",
+        "compile": "tsc -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install",
-        "test": "node ./node_modules/vscode/bin/test"
+        "lint": "tslint --project tsconfig.json -e src/*.d.ts -t verbose",
+        "test": "node ./node_modules/vscode/bin/test",
+        "watch": "tsc -watch -p ./"
     },
     "devDependencies": {
-       "typescript": "^2.0.3",
-        "vscode": "^1.5.0",
-        "mocha": "^2.3.3",
-        "@types/node": "^6.0.40",
-        "@types/mocha": "^2.2.32"
-   }
+        "tslint": "^5.7.0",
+        "tslint-microsoft-contrib": "5.0.3",
+        "typescript": "^2.7.2",
+        "vscode": "^1.1.10",
+        "mocha": "^5.0.1",
+        "@types/node": "^9.4.6",
+        "@types/mocha": "^2.2.48"
+   },
+   "dependencies": {
+		"vscode-extension-telemetry": "^0.0.15"
+	}
 }
