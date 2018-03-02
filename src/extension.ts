@@ -14,7 +14,6 @@ export function activate(context: ExtensionContext) {
 
 function spotCreate() {
     reporter.sendTelemetryEvent('onCommand/spotCreate');
-    reporter.dispose();
     window.showInformationMessage('Creating spot!');
 }
 
