@@ -8,6 +8,7 @@
     },
     "homepage": "https://github.com/derekbekoe/vscode-spot/blob/master/README.md",
     "license": "SEE LICENSE IN LICENSE.md",
+    "aiKey": "14c91bb7-84bd-43e2-80f0-1977e0bc7e49",
     "preview": true,
     "engines": {
         "vscode": "^1.20.0"
