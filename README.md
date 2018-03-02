@@ -12,5 +12,12 @@ VS Code extension for Spot.
 | `Spot: Disconnect` | Disconnect from a spot but keep it running.
 | `Spot: Terminate`  | Terminate a spot.
 
+## Developer Set Up
+
+1. Clone the repository
+2. Open VS Code
+3. Run `npm install`
+4. Start the VS Code debugger to launch the extension
+
 ## License
 [MIT](LICENSE.md)
