@@ -80,13 +80,11 @@ function cmdSpotConnect() {
             return;
         }
         if (isKnownSpot(spotName)) {
-            // window.showInformationMessage(`Attempting to connect to spot ${spotName}`);
             const mockToken = 's9kZHwTzJuH8YLQnWKPe';
             connectToSpot(spotName, mockToken);
         } else {
             window.showInputBox({placeHolder: 'Token for the spot.', password: true}).then((spotToken) => {
                 if (spotToken) {
-                    // window.showInformationMessage(`Attempting to connect to '${spotName}' with token '${spotToken}'`);
                     connectToSpot(spotName, spotToken);
                 }
             });
@@ -96,12 +94,21 @@ function cmdSpotConnect() {
 
 function cmdSpotDisconnect() {
     reporter.sendTelemetryEvent('onCommand/spotDisconnect');
-    window.showInformationMessage('Disconnecting from spot!');
+    const mockIsConnected = false;
+    mockDelay(5000).then(() => {
+        if (mockIsConnected) {
+            window.showInformationMessage(`Disconnected from spot.`);
+        } else {
+            window.showInformationMessage('Not currently connected to a spot.');
+        }
+        updateStatusBar('Not connected');
+    });
 }
 
 function cmdSpotTerminate() {
     reporter.sendTelemetryEvent('onCommand/spotTerminate');
     window.showInformationMessage('Terminating spot!');
+    updateStatusBar('Not connected');
 }
 
 export function deactivate() {
