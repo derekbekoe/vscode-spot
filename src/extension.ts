@@ -111,25 +111,24 @@ function connectToSpot(hostname: string, token: string): Promise<null> {
     const mockConnectSuccess = true;
     return new Promise((resolve, reject) => {
         if (mockConnectSuccess) {
-            mockDelay(1000).then(() => {
-                activeSession = new SpotSession(hostname, token);
-                createSpotConsole(activeSession).then(() => {
-                    window.showInformationMessage(`Connected to ${hostname}`);
-                    updateStatusBar(`${hostname} (connected)`);
-                    resolve();
-                }).catch(() => {
-                    activeSession = null;
-                    console.error('An error occurred whilst creating spot console.');
-                });
+            activeSession = new SpotSession(hostname, token);
+            createSpotConsole(activeSession).then(() => {
+                commands.executeCommand('setContext', 'showSpotExplorer', true);
+                window.showInformationMessage(`Connected to ${hostname}`);
+                updateStatusBar(`${hostname} (connected)`);
+                resolve();
+            }).catch(() => {
+                activeSession = null;
+                commands.executeCommand('setContext', 'showSpotExplorer', false);
+                console.error('An error occurred whilst creating spot console.');
             });
         } else {
-            mockDelay(3000).then(() => {
-                activeSession = null;
-                window.showErrorMessage(`Failed to connect to ${hostname}`);
-                updateStatusBar('Not connected');
-                statusBarItem.show();
-                reject();
-            });
+            activeSession = null;
+            commands.executeCommand('setContext', 'showSpotExplorer', false);
+            window.showErrorMessage(`Failed to connect to ${hostname}`);
+            updateStatusBar('Not connected');
+            statusBarItem.show();
+            reject();
         }
     });
 }
@@ -156,7 +155,8 @@ function cmdSpotConnect() {
 function cmdSpotDisconnect() {
     reporter.sendTelemetryEvent('onCommand/spotDisconnect');
     const mockIsConnected = (activeSession != null);
-    mockDelay(5000).then(() => {
+    mockDelay(500).then(() => {
+        commands.executeCommand('setContext', 'showSpotExplorer', false);
         if (mockIsConnected) {
             ipcQueue.push({ type: 'exit' });
             window.showInformationMessage('Disconnected from spot.');

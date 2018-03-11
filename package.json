@@ -17,6 +17,7 @@
         "Other"
     ],
     "activationEvents": [
+        "onView:spotExplorer",
         "onCommand:spot.Create",
         "onCommand:spot.Connect",
         "onCommand:spot.Disconnect",
@@ -24,6 +25,15 @@
     ],
     "main": "./out/src/extension",
     "contributes": {
+        "views": {
+            "explorer": [
+                {
+					"id": "spotExplorer",
+					"name": "Spot Workspace",
+					"when": "showSpotExplorer"
+				}
+            ]
+        },
         "commands": [
             {
                 "command": "spot.Create",
