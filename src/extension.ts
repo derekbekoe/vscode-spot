@@ -1,9 +1,12 @@
 import { window, ExtensionContext, commands, StatusBarAlignment, StatusBarItem } from 'vscode';
-import { createTelemetryReporter } from './telemetry';
 import TelemetryReporter from 'vscode-extension-telemetry';
+import * as path from 'path';
+import { createTelemetryReporter } from './telemetry';
+import { createServer, readJSON, Queue } from './ipc';
 
 let reporter: TelemetryReporter;
 let statusBarItem: StatusBarItem;
+let activeSession: SpotSession | null;
 
 export function activate(context: ExtensionContext) {
     reporter = createTelemetryReporter(context);
@@ -13,6 +16,10 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(commands.registerCommand('spot.Connect', cmdSpotConnect));
     context.subscriptions.push(commands.registerCommand('spot.Disconnect', cmdSpotDisconnect));
     context.subscriptions.push(commands.registerCommand('spot.Terminate', cmdSpotTerminate));
+}
+
+export class SpotSession {
+    constructor(public hostname: string, public token: string) {}
 }
 
 function updateStatusBar(text: string) {
@@ -26,7 +33,7 @@ function mockDelay(ms: number) {
 
 function cmdSpotCreate() {
     reporter.sendTelemetryEvent('onCommand/spotCreate');
-    window.showInputBox({placeHolder: 'Name of spot.'}).then((spotName) => {
+    window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true}).then((spotName) => {
         if (!spotName) {
             return;
         }
@@ -49,21 +56,75 @@ function isKnownSpot(spotName: string) {
     return knownSpots.indexOf(spotName) > -1;
 }
 
+const ipcQueue = new Queue<any>();
+
+async function createSpotConsole(session: SpotSession): Promise<void> {
+    const hostname = session.hostname;
+    const token = session.token;
+    let shellPath = path.join(__dirname, '../../console_bin/node.sh');
+    let modulePath = path.join(__dirname, 'consoleLauncher');
+    const shellArgs = [
+        process.argv0,
+        '-e',
+        `require('${modulePath}').main()`
+    ]
+    // ipc
+    const ipc = await createServer('vscode-spot-console', async (req, res) => {
+        let dequeue = false;
+        for (const message of await readJSON<any>(req)) {
+            if (message.type === 'poll') {
+                dequeue = true;
+            } else if (message.type === 'log') {
+                console.log(...message.args);
+            } else if (message.type === 'status') {
+                // state.status = message.status;
+                // event.fire(state.status);
+            }
+        }
+        let response = [];
+        if (dequeue) {
+            try {
+                response = await ipcQueue.dequeue(60000);
+            } catch (err) {
+                // ignore timeout
+            }
+        }
+        res.write(JSON.stringify(response));
+        res.end();
+    });
+    const terminal = window.createTerminal({
+        name: `Spot ${hostname}`,
+        shellPath: shellPath,
+        shellArgs: shellArgs,
+        env: {'CONSOLE_IPC': ipc.ipcHandlePath}
+    });
+    terminal.show();
+    ipcQueue.push({
+        type: 'connect',
+        accessToken: token,
+        consoleUri: hostname
+    });
+}
+
 function connectToSpot(hostname: string, token: string): Promise<null> {
-    // TODO Attempt to connect to the spot. If success, do the following. If error, show notification. If spot not ready yet but is available, show message and wait.
-    // TODO Open terminal
     // TODO Add entry to left navigation
-    // TODO Modify status bar
     const mockConnectSuccess = true;
     return new Promise((resolve, reject) => {
         if (mockConnectSuccess) {
-            mockDelay(5000).then(() => {
-                window.showInformationMessage(`Connected to ${hostname}`);
-                updateStatusBar(`${hostname} (connected)`);
-                resolve();
+            mockDelay(1000).then(() => {
+                activeSession = new SpotSession(hostname, token);
+                createSpotConsole(activeSession).then(() => {
+                    window.showInformationMessage(`Connected to ${hostname}`);
+                    updateStatusBar(`${hostname} (connected)`);
+                    resolve();
+                }).catch(() => {
+                    activeSession = null;
+                    console.error('An error occurred whilst creating spot console.');
+                });
             });
         } else {
             mockDelay(3000).then(() => {
+                activeSession = null;
                 window.showErrorMessage(`Failed to connect to ${hostname}`);
                 updateStatusBar('Not connected');
                 statusBarItem.show();
@@ -75,7 +136,7 @@ function connectToSpot(hostname: string, token: string): Promise<null> {
 
 function cmdSpotConnect() {
     reporter.sendTelemetryEvent('onCommand/spotConnect');
-    window.showInputBox({placeHolder: 'Spot to connect to.'}).then((spotName) => {
+    window.showInputBox({placeHolder: 'Spot to connect to.', ignoreFocusOut: true}).then((spotName) => {
         if (!spotName) {
             return;
         }
@@ -83,7 +144,7 @@ function cmdSpotConnect() {
             const mockToken = 's9kZHwTzJuH8YLQnWKPe';
             connectToSpot(spotName, mockToken);
         } else {
-            window.showInputBox({placeHolder: 'Token for the spot.', password: true}).then((spotToken) => {
+            window.showInputBox({placeHolder: 'Token for the spot.', password: true, ignoreFocusOut: true}).then((spotToken) => {
                 if (spotToken) {
                     connectToSpot(spotName, spotToken);
                 }
@@ -94,10 +155,11 @@ function cmdSpotConnect() {
 
 function cmdSpotDisconnect() {
     reporter.sendTelemetryEvent('onCommand/spotDisconnect');
-    const mockIsConnected = false;
+    const mockIsConnected = (activeSession != null);
     mockDelay(5000).then(() => {
         if (mockIsConnected) {
-            window.showInformationMessage(`Disconnected from spot.`);
+            ipcQueue.push({ type: 'exit' });
+            window.showInformationMessage('Disconnected from spot.');
         } else {
             window.showInformationMessage('Not currently connected to a spot.');
         }

@@ -62,9 +62,13 @@
         "vscode": "^1.1.10",
         "mocha": "^5.0.1",
         "@types/node": "^9.4.6",
-        "@types/mocha": "^2.2.48"
+        "@types/mocha": "^2.2.48",
+        "@types/request-promise": "^4.1.41",
+        "@types/ws": "^4.0.1"
     },
     "dependencies": {
-        "vscode-extension-telemetry": "^0.0.15"
+        "request-promise": "^4.2.2",
+        "vscode-extension-telemetry": "^0.0.15",
+        "ws": "^5.0.0"
     }
 }
