@@ -1,4 +1,4 @@
-import { window, Uri, workspace, TextDocumentContentProvider, Event, CancellationToken, TextDocumentWillSaveEvent } from 'vscode';
+import { window, Uri, workspace, TextDocumentWillSaveEvent } from 'vscode';
 
 // export class SpotTextDocumentContentProvider implements TextDocumentContentProvider {
 //     onDidChange?: Event<Uri> | undefined;

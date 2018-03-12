@@ -4,7 +4,7 @@ import * as path from 'path';
 import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
-import { SpotTextDocumentContentProvider, openFileEditor } from './spotFiles';
+import { openFileEditor } from './spotFiles';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -17,7 +17,6 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(statusBarItem);
     spotTreeDataProvider = new SpotTreeDataProvider();
     window.registerTreeDataProvider('spotExplorer', spotTreeDataProvider);
-    // workspace.registerTextDocumentContentProvider('spot', new SpotTextDocumentContentProvider());
     context.subscriptions.push(commands.registerCommand('spot.Create', cmdSpotCreate));
     context.subscriptions.push(commands.registerCommand('spot.Connect', cmdSpotConnect));
     context.subscriptions.push(commands.registerCommand('spot.Disconnect', cmdSpotDisconnect));
@@ -165,7 +164,7 @@ function cmdSpotDisconnect() {
     commands.executeCommand('setContext', 'canShowSpotExplorer', false);
     if (mockIsConnected) {
         // TODO Check if there are any unsaved files from spot. If so, show warning or confirmation or something.
-        console.log(workspace.textDocuments);
+        // console.log(workspace.textDocuments);
         ipcQueue.push({ type: 'exit' });
         window.showInformationMessage('Disconnected from spot.');
     } else {
