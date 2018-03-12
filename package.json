@@ -29,8 +29,8 @@
             "explorer": [
                 {
 					"id": "spotExplorer",
-					"name": "Spot Workspace",
-					"when": "showSpotExplorer"
+					"name": "Spot",
+					"when": "canShowSpotExplorer"
 				}
             ]
         },

@@ -1,10 +1,13 @@
-import { window, ExtensionContext, commands, StatusBarAlignment, StatusBarItem } from 'vscode';
+import { window, ExtensionContext, commands, StatusBarAlignment, StatusBarItem, workspace } from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
 import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue } from './ipc';
+import { SpotTreeDataProvider } from './spotTreeDataProvider';
+import { SpotTextDocumentContentProvider, openFileEditor } from './spotFiles';
 
 let reporter: TelemetryReporter;
+let spotTreeDataProvider: SpotTreeDataProvider;
 let statusBarItem: StatusBarItem;
 let activeSession: SpotSession | null;
 
@@ -12,10 +15,14 @@ export function activate(context: ExtensionContext) {
     reporter = createTelemetryReporter(context);
     statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
     context.subscriptions.push(statusBarItem);
+    spotTreeDataProvider = new SpotTreeDataProvider();
+    window.registerTreeDataProvider('spotExplorer', spotTreeDataProvider);
+    // workspace.registerTextDocumentContentProvider('spot', new SpotTextDocumentContentProvider());
     context.subscriptions.push(commands.registerCommand('spot.Create', cmdSpotCreate));
     context.subscriptions.push(commands.registerCommand('spot.Connect', cmdSpotConnect));
     context.subscriptions.push(commands.registerCommand('spot.Disconnect', cmdSpotDisconnect));
     context.subscriptions.push(commands.registerCommand('spot.Terminate', cmdSpotTerminate));
+    context.subscriptions.push(commands.registerCommand('spot.OpenFileEditor', openFileEditor));
 }
 
 export class SpotSession {
@@ -113,18 +120,18 @@ function connectToSpot(hostname: string, token: string): Promise<null> {
         if (mockConnectSuccess) {
             activeSession = new SpotSession(hostname, token);
             createSpotConsole(activeSession).then(() => {
-                commands.executeCommand('setContext', 'showSpotExplorer', true);
+                commands.executeCommand('setContext', 'canShowSpotExplorer', true);
                 window.showInformationMessage(`Connected to ${hostname}`);
                 updateStatusBar(`${hostname} (connected)`);
                 resolve();
             }).catch(() => {
                 activeSession = null;
-                commands.executeCommand('setContext', 'showSpotExplorer', false);
+                commands.executeCommand('setContext', 'canShowSpotExplorer', false);
                 console.error('An error occurred whilst creating spot console.');
             });
         } else {
             activeSession = null;
-            commands.executeCommand('setContext', 'showSpotExplorer', false);
+            commands.executeCommand('setContext', 'canShowSpotExplorer', false);
             window.showErrorMessage(`Failed to connect to ${hostname}`);
             updateStatusBar('Not connected');
             statusBarItem.show();
@@ -155,16 +162,16 @@ function cmdSpotConnect() {
 function cmdSpotDisconnect() {
     reporter.sendTelemetryEvent('onCommand/spotDisconnect');
     const mockIsConnected = (activeSession != null);
-    mockDelay(500).then(() => {
-        commands.executeCommand('setContext', 'showSpotExplorer', false);
-        if (mockIsConnected) {
-            ipcQueue.push({ type: 'exit' });
-            window.showInformationMessage('Disconnected from spot.');
-        } else {
-            window.showInformationMessage('Not currently connected to a spot.');
-        }
-        updateStatusBar('Not connected');
-    });
+    commands.executeCommand('setContext', 'canShowSpotExplorer', false);
+    if (mockIsConnected) {
+        // TODO Check if there are any unsaved files from spot. If so, show warning or confirmation or something.
+        console.log(workspace.textDocuments);
+        ipcQueue.push({ type: 'exit' });
+        window.showInformationMessage('Disconnected from spot.');
+    } else {
+        window.showInformationMessage('Not currently connected to a spot.');
+    }
+    updateStatusBar('Not connected');
 }
 
 function cmdSpotTerminate() {
