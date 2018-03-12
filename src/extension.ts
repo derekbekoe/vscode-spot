@@ -5,6 +5,7 @@ import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { openFileEditor } from './spotFiles';
+import { SpotSession } from './session';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -22,10 +23,6 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(commands.registerCommand('spot.Disconnect', cmdSpotDisconnect));
     context.subscriptions.push(commands.registerCommand('spot.Terminate', cmdSpotTerminate));
     context.subscriptions.push(commands.registerCommand('spot.OpenFileEditor', openFileEditor));
-}
-
-export class SpotSession {
-    constructor(public hostname: string, public token: string) {}
 }
 
 function updateStatusBar(text: string) {
@@ -118,6 +115,7 @@ function connectToSpot(hostname: string, token: string): Promise<null> {
     return new Promise((resolve, reject) => {
         if (mockConnectSuccess) {
             activeSession = new SpotSession(hostname, token);
+            spotTreeDataProvider.connect(activeSession);
             createSpotConsole(activeSession).then(() => {
                 commands.executeCommand('setContext', 'canShowSpotExplorer', true);
                 window.showInformationMessage(`Connected to ${hostname}`);
@@ -165,6 +163,7 @@ function cmdSpotDisconnect() {
     if (mockIsConnected) {
         // TODO Check if there are any unsaved files from spot. If so, show warning or confirmation or something.
         // console.log(workspace.textDocuments);
+        spotTreeDataProvider.disconnect();
         ipcQueue.push({ type: 'exit' });
         window.showInformationMessage('Disconnected from spot.');
     } else {

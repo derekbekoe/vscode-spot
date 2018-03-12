@@ -1,4 +1,8 @@
 import * as vscode from "vscode";
+import { URL } from 'url';
+import * as WS from 'ws';
+
+import { SpotSession } from './session';
 
 export enum TNodeKind { NODE_FILE, NODE_FOLDER };
 
@@ -7,11 +11,41 @@ export class SpotTreeDataProvider implements vscode.TreeDataProvider<TNode> {
 
   private _onDidChangeTreeData: vscode.EventEmitter<TNode | undefined> = new vscode.EventEmitter<TNode | undefined>();
   readonly onDidChangeTreeData: vscode.Event<TNode | undefined> = this._onDidChangeTreeData.event;
+  private ws: WS | undefined;
 
   constructor() {}
 
   public refresh(): void {
     this._onDidChangeTreeData.fire();
+  }
+
+  public connect(session: SpotSession) {
+    const url = new URL(session.hostname);
+    const socketProtocol = url.protocol === 'https' ? 'wss' : 'ws';
+    const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/files/?token=${session.token}`;
+	  // TODO For security reasons, don't do rejectUnauthorized
+    this.ws = new WS(socketUri, {rejectUnauthorized: false});
+    this.ws.on('open', function () {
+      console.log('socket open');
+    });
+  
+    this.ws.on('message', function (data) {
+      console.log('socket data', data);
+    });
+  
+    this.ws.on('error', function (event) {
+      console.error('Socket error: ' + JSON.stringify(event));
+    });
+  
+    this.ws.on('close', function () {
+      console.log('Socket closed');
+    });
+  }
+
+  public disconnect() {
+    if (this.ws) {
+      this.ws.terminate();
+    }
   }
 
   getTreeItem(element: TNode): vscode.TreeItem {
