@@ -158,7 +158,8 @@ async function connectTerminal(ipcHandle: string, accessToken: string, consoleUr
 		const res = response.body;
 		const termId = res;
 		const consoleUrl = new URL(consoleUri);
-		const socketUri = `wss://${consoleUrl.hostname}:${consoleUrl.port}/terminals/${termId}/?token=${accessToken}`;
+		const socketProtocol = consoleUrl.protocol === 'https' ? 'wss' : 'ws';
+		const socketUri = `${socketProtocol}://${consoleUrl.hostname}:${consoleUrl.port}/terminals/${termId}/?token=${accessToken}`;
 		connectSocket(ipcHandle, socketUri);
 
 		process.stdout.on('resize', () => {
