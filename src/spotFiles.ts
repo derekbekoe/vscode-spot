@@ -56,18 +56,19 @@ export class SpotFileTracker {
           }
           this.onFilesChangedEmitter.fire(this.files);
         });
-      
+        
         this.ws.on('error', function (event) {
           console.error('Socket error: ' + JSON.stringify(event));
         });
-      
+        
         this.ws.on('close', function () {
           console.log('Socket closed');
         });
       }
-    
+      
       public disconnect() {
-        console.log(this.files);
+        this.files = new Map<string, SpotFile>();
+        this.onFilesChangedEmitter.fire(this.files);
         if (this.ws) {
           this.ws.terminate();
         }
