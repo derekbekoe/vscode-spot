@@ -4,13 +4,8 @@ import { URL } from 'url';
 import * as WS from 'ws';
 
 export class SpotFile {
-    constructor(public isDirectory: boolean, public children: Map<string, SpotFile>=new Map<string, SpotFile>()) {}
+    constructor(public isDirectory: boolean, public path: string, public children: Map<string, SpotFile>=new Map<string, SpotFile>()) {}
 }
-
-interface SpotFilesChanged {
-  files: Map<string, SpotFile>;
-}
-
 
 export class SpotFileTracker {
 
@@ -36,7 +31,7 @@ export class SpotFileTracker {
           console.log('socket data', data);
           const obj_data = JSON.parse(data);
           if (obj_data.event === 'addDir' || obj_data.event === 'add') {
-            var new_node = new SpotFile(obj_data.event === 'addDir');
+            var new_node = new SpotFile(obj_data.event === 'addDir', obj_data.path);
             const segments: string[] = obj_data.path.split('/').slice(1);
             var f_s = this.files;
             for (let segment of segments) {
@@ -48,6 +43,16 @@ export class SpotFileTracker {
                 f_s = new_node.children;
               }
             }
+          } else if (obj_data.event === 'unlinkDir' || obj_data.event === 'unlink') {
+            const segments: string[] = obj_data.path.split('/').slice(1);
+            var f_parent = this.files;
+            for (let i = 0; i < segments.length-1; i++) {
+              const segment_v = f_parent.get(segments[i]);
+              if (segment_v) {
+                f_parent = segment_v.children;
+              }
+            }
+            f_parent.delete(segments[segments.length -1]);
           }
           this.onFilesChangedEmitter.fire(this.files);
         });
