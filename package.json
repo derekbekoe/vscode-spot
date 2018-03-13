@@ -28,10 +28,10 @@
         "views": {
             "explorer": [
                 {
-					"id": "spotExplorer",
-					"name": "Spot",
-					"when": "canShowSpotExplorer"
-				}
+                    "id": "spotExplorer",
+                    "name": "Spot",
+                    "when": "canShowSpotExplorer"
+                }
             ]
         },
         "commands": [
@@ -77,7 +77,9 @@
         "@types/ws": "^4.0.1"
     },
     "dependencies": {
+        "@types/tmp": "0.0.33",
         "request-promise": "^4.2.2",
+        "tmp": "0.0.33",
         "vscode-extension-telemetry": "^0.0.15",
         "ws": "^5.0.0"
     }

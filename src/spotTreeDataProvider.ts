@@ -31,7 +31,7 @@ export class SpotTreeDataProvider implements vscode.TreeDataProvider<TNode> {
           var bn_command = v.isDirectory ? undefined : {
               command: "spot.OpenFileEditor",
               title: f,
-              arguments: [v.path],
+              arguments: [v.path, v.spotSession],
           };
           let bn: TNode = new TNode(f, v.isDirectory ? TNodeKind.NODE_FOLDER : TNodeKind.NODE_FILE, v, bn_command);
           ll.push(bn);

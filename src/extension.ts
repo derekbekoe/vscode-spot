@@ -1,10 +1,10 @@
-import { window, ExtensionContext, commands, StatusBarAlignment, StatusBarItem } from 'vscode';
+import { window, ExtensionContext, commands, StatusBarAlignment, StatusBarItem, workspace } from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
 import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
-import { openFileEditor, SpotFileTracker } from './spotFiles';
+import { SpotFileTracker, openFileEditor } from './spotFiles';
 import { SpotSession } from './session';
 
 let reporter: TelemetryReporter;
