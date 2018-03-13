@@ -4,19 +4,21 @@ import * as path from 'path';
 import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
-import { openFileEditor } from './spotFiles';
+import { openFileEditor, SpotFileTracker } from './spotFiles';
 import { SpotSession } from './session';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
 let statusBarItem: StatusBarItem;
 let activeSession: SpotSession | null;
+let spotFileTracker: SpotFileTracker;
 
 export function activate(context: ExtensionContext) {
     reporter = createTelemetryReporter(context);
     statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
     context.subscriptions.push(statusBarItem);
-    spotTreeDataProvider = new SpotTreeDataProvider();
+    spotFileTracker = new SpotFileTracker();
+    spotTreeDataProvider = new SpotTreeDataProvider(spotFileTracker);
     window.registerTreeDataProvider('spotExplorer', spotTreeDataProvider);
     context.subscriptions.push(commands.registerCommand('spot.Create', cmdSpotCreate));
     context.subscriptions.push(commands.registerCommand('spot.Connect', cmdSpotConnect));
@@ -110,12 +112,11 @@ async function createSpotConsole(session: SpotSession): Promise<void> {
 }
 
 function connectToSpot(hostname: string, token: string): Promise<null> {
-    // TODO Add entry to left navigation
     const mockConnectSuccess = true;
     return new Promise((resolve, reject) => {
         if (mockConnectSuccess) {
             activeSession = new SpotSession(hostname, token);
-            spotTreeDataProvider.connect(activeSession);
+            spotFileTracker.connect(activeSession);
             createSpotConsole(activeSession).then(() => {
                 commands.executeCommand('setContext', 'canShowSpotExplorer', true);
                 window.showInformationMessage(`Connected to ${hostname}`);
@@ -163,7 +164,7 @@ function cmdSpotDisconnect() {
     if (mockIsConnected) {
         // TODO Check if there are any unsaved files from spot. If so, show warning or confirmation or something.
         // console.log(workspace.textDocuments);
-        spotTreeDataProvider.disconnect();
+        spotFileTracker.disconnect();
         ipcQueue.push({ type: 'exit' });
         window.showInformationMessage('Disconnected from spot.');
     } else {
