@@ -77,7 +77,9 @@
         "@types/ws": "^4.0.1"
     },
     "dependencies": {
+        "@types/opn": "^5.1.0",
         "@types/tmp": "0.0.33",
+        "opn": "^5.3.0",
         "request-promise": "^4.2.2",
         "tmp": "0.0.33",
         "vscode-extension-telemetry": "^0.0.15",

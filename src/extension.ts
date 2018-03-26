@@ -1,6 +1,7 @@
 import { window, ExtensionContext, commands, StatusBarAlignment, StatusBarItem } from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
+import opn = require('opn');
 import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
@@ -25,10 +26,24 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(commands.registerCommand('spot.Disconnect', cmdSpotDisconnect));
     context.subscriptions.push(commands.registerCommand('spot.Terminate', cmdSpotTerminate));
     context.subscriptions.push(commands.registerCommand('spot.OpenFileEditor', openFileEditor));
+    context.subscriptions.push(commands.registerCommand('spot.OpenSpotInBrowser', openSpotInBrowser));
+}
+
+function openSpotInBrowser() {
+    if (activeSession) {
+        opn(activeSession.hostname + '?token=' + activeSession.token);
+    }
 }
 
 function updateStatusBar(text: string) {
     statusBarItem.text = `Spot: ${text}`;
+    if (activeSession) {
+        statusBarItem.command = 'spot.OpenSpotInBrowser';
+        statusBarItem.tooltip = 'Open spot in browser';
+    } else {
+        statusBarItem.command = undefined;
+        statusBarItem.tooltip = undefined;
+    }
     statusBarItem.show();
 }
 
@@ -159,9 +174,8 @@ function cmdSpotConnect() {
 
 function cmdSpotDisconnect() {
     reporter.sendTelemetryEvent('onCommand/spotDisconnect');
-    const mockIsConnected = (activeSession != null);
     commands.executeCommand('setContext', 'canShowSpotExplorer', false);
-    if (mockIsConnected) {
+    if (activeSession != null) {
         // TODO Check if there are any unsaved files from spot. If so, show warning or confirmation or something.
         // console.log(workspace.textDocuments);
         spotFileTracker.disconnect();
@@ -170,6 +184,7 @@ function cmdSpotDisconnect() {
     } else {
         window.showInformationMessage('Not currently connected to a spot.');
     }
+    activeSession = null;
     updateStatusBar('Not connected');
 }
 
