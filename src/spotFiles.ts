@@ -23,7 +23,7 @@ export class SpotFileTracker {
 
     public connect(session: SpotSession) {
         const url = new URL(session.hostname);
-        const socketProtocol = url.protocol === 'https' ? 'wss' : 'ws';
+        const socketProtocol = url.protocol.startsWith('https') ? 'wss' : 'ws';
         const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/files/?token=${session.token}`;
           // TODO For security reasons, don't do rejectUnauthorized
         this.ws = new WS(socketUri, {rejectUnauthorized: false});
@@ -98,7 +98,7 @@ export function openFileEditor(documentPath: any, session: SpotSession) {
     return;
   }
   const url = new URL(session.hostname);
-  const socketProtocol = url.protocol === 'https' ? 'wss' : 'ws';
+  const socketProtocol = url.protocol.startsWith('https') ? 'wss' : 'ws';
   const fileId = createHash('md5').update(documentPath).digest('hex');
   const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/file/${fileId}/?token=${session.token}`;
   // TODO For security reasons, don't do rejectUnauthorized

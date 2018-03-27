@@ -158,7 +158,7 @@ async function connectTerminal(ipcHandle: string, accessToken: string, consoleUr
 		const res = response.body;
 		const termId = res;
 		const consoleUrl = new URL(consoleUri);
-		const socketProtocol = consoleUrl.protocol === 'https' ? 'wss' : 'ws';
+		const socketProtocol = consoleUrl.protocol.startsWith('https') ? 'wss' : 'ws';
 		const socketUri = `${socketProtocol}://${consoleUrl.hostname}:${consoleUrl.port}/terminals/${termId}/?token=${accessToken}`;
 		connectSocket(ipcHandle, socketUri);
 
