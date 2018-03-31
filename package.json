@@ -1,8 +1,8 @@
 {
     "name": "vscode-spot",
     "description": "VS Code extension for the Spot service.",
-    "version": "0.0.1",
-    "publisher": "derek@derekbekoe.com",
+    "version": "0.1.1",
+    "publisher": "derek-bekoe",
     "repository": {
         "url": "https://github.com/derekbekoe/vscode-spot.git"
     },
@@ -80,8 +80,10 @@
         "@types/opn": "^5.1.0",
         "@types/tmp": "0.0.33",
         "opn": "^5.3.0",
+        "request": "^2.85.0",
         "request-promise": "^4.2.2",
         "tmp": "0.0.33",
+        "vsce": "^1.37.6",
         "vscode-extension-telemetry": "^0.0.15",
         "ws": "^5.0.0"
     }
