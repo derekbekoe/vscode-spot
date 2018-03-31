@@ -2,6 +2,8 @@
 
 [![Travis](https://travis-ci.com/derekbekoe/vscode-spot.svg?token=ng6izydYD2zkXPDRE5DP&branch=dev)](https://travis-ci.com/derekbekoe/vscode-spot)
 
+Developer tools are becoming more cloud powered. Scaling beyond what the user’s machine can provide is an awesome opportunity to do amazing things. Spot is a VS Code extension that provides an integrated terminal, file explorer and editor to any container image with terminal access through the browser also.
+
 - VS Code Extension
     - Terminal, File Explorer, File Editing, Notifications, Status Bar
 - Persistent File Storage
@@ -49,7 +51,8 @@ Spot utilizes [Azure Container Instances](https://azure.microsoft.com/en-us/serv
     - Large container images can take a couple minutes to start.
 - Reliability / Resilience
     - Better handling of loss of connectivity is yet to come.
-
+- Only Linux containers are supported
+    - We hope to lift this limitation in the future.
 
 ## Developer Setup
 
