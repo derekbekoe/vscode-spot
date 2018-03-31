@@ -23,23 +23,20 @@
 | `Spot: Terminate`  | Terminate a spot.
 
 
-## :grey_exclamation: ACI
-Spot utilizes [Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/).  
-See [Container Instances pricing](https://azure.microsoft.com/en-us/pricing/details/container-instances/) for their pricing information.
-
-:grey_exclamation: When you're done with a spot, save any files in persistent storage and **terminate** the spot.
-
-
 ## Quickstart
 
 A few steps to get you started right away.
 
 TODO
 
+Spot utilizes [Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/). See [Container Instances pricing](https://azure.microsoft.com/en-us/pricing/details/container-instances/) for their pricing information.
+
+:warning: When you're done with a spot, save any files in persistent storage and **terminate** the spot.
+
 
 ## Feedback
 
-* Vote for [popular feature requests](https://github.com/derekbekoe/vscode-spot/issues?q=is%3Aopen+is%3Aissue+label%3Afeature-request+sort%3Areactions-%2B1-desc).
+* Vote for [popular feature requests](https://github.com/derekbekoe/vscode-spot/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement+sort%3Areactions-%2B1-desc).
 * File a bug in [GitHub Issues](https://github.com/derekbekoe/vscode-spot/issues).
 * [Tweet](https://twitter.com/search?q=vscodespot) with hashtag #vscodespot with other feedback.
 
