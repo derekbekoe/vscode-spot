@@ -38,7 +38,7 @@ Spot utilizes [Azure Container Instances](https://azure.microsoft.com/en-us/serv
 
 * Vote for [popular feature requests](https://github.com/derekbekoe/vscode-spot/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement+sort%3Areactions-%2B1-desc).
 * File a bug in [GitHub Issues](https://github.com/derekbekoe/vscode-spot/issues).
-* [Tweet](https://twitter.com/search?q=vscodespot) with hashtag #vscodespot with other feedback.
+* Tweet with hashtag [#vscodespot](https://twitter.com/search?q=vscodespot) with other feedback.
 
 
 ## Known limitations
@@ -46,7 +46,7 @@ Spot utilizes [Azure Container Instances](https://azure.microsoft.com/en-us/serv
 - Intellisense & Debugging
     - Currently, there is no cross-file Intellisense or debugging
 - Image pull time
-    - The majority of spot startup time is the time it takes for Azure Container Instances to pull your requested image.
+    - Large container images can take a couple minutes to start.
 - Reliability / Resilience
     - Better handling of loss of connectivity is yet to come.
 
