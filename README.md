@@ -13,6 +13,7 @@ Developer tools are becoming more cloud powered. Scaling beyond what the user’
 
 ![Spot VS Code extension commands](doc/assets/spot_screenshot1.png "Spot VS Code extension commands")
 ![Connected to spot](doc/assets/spot_screenshot2.png "Connected to spot")
+![Access spot from browser](doc/assets/spot_screenshot3.png "Access spot from browser")
 
 
 ## Commands
