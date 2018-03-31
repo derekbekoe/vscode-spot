@@ -32,9 +32,9 @@ A few steps to get you started right away.
 
 TODO
 
-Spot utilizes [Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/). See [Container Instances pricing](https://azure.microsoft.com/en-us/pricing/details/container-instances/) for their pricing information.
+:warning: Spot utilizes [Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/). See [Container Instances pricing](https://azure.microsoft.com/en-us/pricing/details/container-instances/) for their pricing information.
 
-:warning: When you're done with a spot, save any files in persistent storage and **terminate** the spot.
+:exclamation: When you're done with a spot, save any files in persistent storage and **terminate** the spot.
 
 
 ## Feedback
@@ -44,7 +44,7 @@ Spot utilizes [Azure Container Instances](https://azure.microsoft.com/en-us/serv
 * Tweet with hashtag [#vscodespot](https://twitter.com/search?q=vscodespot) with other feedback.
 
 
-## Known limitations
+## Known Limitations
 
 - Intellisense & Debugging
     - Currently, there is no cross-file Intellisense or debugging
