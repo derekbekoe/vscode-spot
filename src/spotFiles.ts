@@ -26,8 +26,7 @@ export class SpotFileTracker {
     const url = new URL(session.hostname);
     const socketProtocol = url.protocol.startsWith('https') ? 'wss' : 'ws';
     const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/files/?token=${session.token}`;
-      // TODO For security reasons, don't do rejectUnauthorized
-    this.ws = new WS(socketUri, {rejectUnauthorized: false});
+    this.ws = new WS(socketUri);
     this.ws.on('open', function () {
       console.log('socket open');
     });
@@ -107,8 +106,7 @@ export function openFileEditor(documentPath: any, session: SpotSession) {
   const socketProtocol = url.protocol.startsWith('https') ? 'wss' : 'ws';
   const fileId = createHash('md5').update(documentPath).digest('hex');
   const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/file/${fileId}/?token=${session.token}`;
-  // TODO For security reasons, don't do rejectUnauthorized
-  const ws = new WS(socketUri, {rejectUnauthorized: false});
+  const ws = new WS(socketUri);
   ws.on('open', () => {
     var data = {'event': 'fileDownload', 'path': documentPath};
     ws!.send(JSON.stringify(data));
