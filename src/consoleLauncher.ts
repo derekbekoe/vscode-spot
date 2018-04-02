@@ -21,11 +21,9 @@ function getWindowSize() {
 
 async function initializeTerminal(accessToken: string, consoleUri: string) {
 	const initialGeometry = getWindowSize();
-	// TODO For security reasons, don't do rejectUnauthorized
 	return request({
 		uri: consoleUri + '/terminals?cols=' + initialGeometry.cols + '&rows=' + initialGeometry.rows + '&token=' + accessToken,
 		method: 'POST',
-		rejectUnauthorized: false,
 		headers: {
 			'Content-Type': 'application/json',
 			'Accept': 'application/json'
@@ -38,8 +36,7 @@ async function initializeTerminal(accessToken: string, consoleUri: string) {
 
 function connectSocket(ipcHandle: string, url: string) {
 
-	// TODO For security reasons, don't do rejectUnauthorized
-	const ws = new WS(url, {rejectUnauthorized: false});
+	const ws = new WS(url);
 
 	ws.on('open', function () {
 		process.stdin.on('data', function (data) {
@@ -104,11 +101,9 @@ async function resize(accessToken: string, consoleUri: string, termId: string) {
 		}
 
 		const { cols, rows } = getWindowSize();
-		// TODO For security reasons, don't do rejectUnauthorized
 		const response = await request({
 			uri: consoleUri + '/terminals/' + termId + '/size?cols=' + cols + '&rows=' + rows + '&token=' + accessToken,
 			method: 'POST',
-			rejectUnauthorized: false,
 			headers: {
 				'Accept': 'application/json',
 				'Content-Type': 'application/json'
