@@ -174,12 +174,17 @@ function cmdSpotConnect() {
 
 function cmdSpotDisconnect() {
     reporter.sendTelemetryEvent('onCommand/spotDisconnect');
-    commands.executeCommand('setContext', 'canShowSpotExplorer', false);
     if (activeSession != null) {
-        // TODO Check if there are any unsaved files from spot. If so, show warning or confirmation or something.
-        // console.log(workspace.textDocuments);
+        // Check if there are any unsaved files from the spot
+        for (var te of window.visibleTextEditors) {
+            if (te.document.isDirty && te.document.fileName.indexOf('_spot') > -1) {
+                window.showWarningMessage('Please save unsaved files in spot.');
+                return;
+            }
+        }
         spotFileTracker.disconnect();
         ipcQueue.push({ type: 'exit' });
+        commands.executeCommand('setContext', 'canShowSpotExplorer', false);
         window.showInformationMessage('Disconnected from spot.');
     } else {
         window.showInformationMessage('Not currently connected to a spot.');

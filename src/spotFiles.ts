@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as WS from 'ws';
 import * as tmp from 'tmp';
+import * as rimraf from 'rimraf';
 
 export class SpotFile {
     constructor(public isDirectory: boolean, public path: string, public spotSession: SpotSession, public children: Map<string, SpotFile>=new Map<string, SpotFile>()) {}
@@ -13,70 +14,75 @@ export class SpotFile {
 
 export class SpotFileTracker {
 
-    private ws: WS | undefined;
-    public files: Map<string, SpotFile> = new Map<string, SpotFile>();
+  private ws: WS | undefined;
+  public files: Map<string, SpotFile> = new Map<string, SpotFile>();
 
-    private onFilesChangedEmitter = new EventEmitter<Map<string, SpotFile>>();
-    get onFilesChanged(): Event<Map<string, SpotFile>> {return this.onFilesChangedEmitter.event; }
+  private onFilesChangedEmitter = new EventEmitter<Map<string, SpotFile>>();
+  get onFilesChanged(): Event<Map<string, SpotFile>> {return this.onFilesChangedEmitter.event; }
 
-    constructor(){}
+  constructor(){}
 
-    public connect(session: SpotSession) {
-        const url = new URL(session.hostname);
-        const socketProtocol = url.protocol.startsWith('https') ? 'wss' : 'ws';
-        const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/files/?token=${session.token}`;
-          // TODO For security reasons, don't do rejectUnauthorized
-        this.ws = new WS(socketUri, {rejectUnauthorized: false});
-        this.ws.on('open', function () {
-          console.log('socket open');
-        });
-      
-        this.ws.on('message', (data: string) => {
-          console.log('socket data', data);
-          const obj_data = JSON.parse(data);
-          if (obj_data.event === 'addDir' || obj_data.event === 'add') {
-            var new_node = new SpotFile(obj_data.event === 'addDir', obj_data.path, session);
-            const segments: string[] = obj_data.path.split('/').slice(1);
-            var f_s = this.files;
-            for (let segment of segments) {
-              const segment_v = f_s.get(segment);
-              if (segment_v) {
-                f_s = segment_v.children;
-              } else {
-                f_s.set(segment, new_node);
-                f_s = new_node.children;
-              }
-            }
-          } else if (obj_data.event === 'unlinkDir' || obj_data.event === 'unlink') {
-            const segments: string[] = obj_data.path.split('/').slice(1);
-            var f_parent = this.files;
-            for (let i = 0; i < segments.length-1; i++) {
-              const segment_v = f_parent.get(segments[i]);
-              if (segment_v) {
-                f_parent = segment_v.children;
-              }
-            }
-            f_parent.delete(segments[segments.length -1]);
+  public connect(session: SpotSession) {
+    const url = new URL(session.hostname);
+    const socketProtocol = url.protocol.startsWith('https') ? 'wss' : 'ws';
+    const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/files/?token=${session.token}`;
+      // TODO For security reasons, don't do rejectUnauthorized
+    this.ws = new WS(socketUri, {rejectUnauthorized: false});
+    this.ws.on('open', function () {
+      console.log('socket open');
+    });
+  
+    this.ws.on('message', (data: string) => {
+      console.log('socket data', data);
+      const obj_data = JSON.parse(data);
+      if (obj_data.event === 'addDir' || obj_data.event === 'add') {
+        var new_node = new SpotFile(obj_data.event === 'addDir', obj_data.path, session);
+        const segments: string[] = obj_data.path.split('/').slice(1);
+        var f_s = this.files;
+        for (let segment of segments) {
+          const segment_v = f_s.get(segment);
+          if (segment_v) {
+            f_s = segment_v.children;
+          } else {
+            f_s.set(segment, new_node);
+            f_s = new_node.children;
           }
-          this.onFilesChangedEmitter.fire(this.files);
-        });
-        
-        this.ws.on('error', function (event) {
-          console.error('Socket error: ' + JSON.stringify(event));
-        });
-        
-        this.ws.on('close', function () {
-          console.log('Socket closed');
-        });
-      }
-      
-      public disconnect() {
-        this.files = new Map<string, SpotFile>();
-        this.onFilesChangedEmitter.fire(this.files);
-        if (this.ws) {
-          this.ws.terminate();
         }
+      } else if (obj_data.event === 'unlinkDir' || obj_data.event === 'unlink') {
+        const segments: string[] = obj_data.path.split('/').slice(1);
+        var f_parent = this.files;
+        for (let i = 0; i < segments.length-1; i++) {
+          const segment_v = f_parent.get(segments[i]);
+          if (segment_v) {
+            f_parent = segment_v.children;
+          }
+        }
+        f_parent.delete(segments[segments.length -1]);
       }
+      this.onFilesChangedEmitter.fire(this.files);
+    });
+    
+    this.ws.on('error', function (event) {
+      console.error('Socket error: ' + JSON.stringify(event));
+    });
+    
+    this.ws.on('close', function () {
+      console.log('Socket closed');
+    });
+  }
+  
+  public disconnect() {
+    this.files = new Map<string, SpotFile>();
+    this.onFilesChangedEmitter.fire(this.files);
+    if (this.ws) {
+      this.ws.terminate();
+    }
+    // Delete the directory on disconnect.
+    if (tmpobj) {
+      const dirname = path.join(tmpobj.name, '_spot');
+      rimraf.sync(dirname);
+    }
+  }
 }
 
 function ensureDirectoryExistence(filePath: string) {
