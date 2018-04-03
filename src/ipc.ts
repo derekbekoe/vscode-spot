@@ -61,7 +61,7 @@ export async function sendData(socketPath: string, data: string) {
 	});
 }
 
-async function randomBytes(size: number) {
+export async function randomBytes(size: number) {
 	return new Promise<Buffer>((resolve, reject) => {
 		crypto.randomBytes(size, (err, buf) => {
 			if (err) {

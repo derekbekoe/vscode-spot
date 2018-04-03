@@ -24,6 +24,9 @@
         "onCommand:spot.Terminate"
     ],
     "main": "./out/src/extension",
+    "extensionDependencies": [
+        "ms-vscode.azure-account"
+    ],
     "contributes": {
         "views": {
             "explorer": [
@@ -80,6 +83,9 @@
         "@types/opn": "^5.1.0",
         "@types/rimraf": "^2.0.2",
         "@types/tmp": "0.0.33",
+        "azure-arm-resource": "^3.1.1-preview",
+        "ms-rest": "^2.3.2",
+        "ms-rest-azure": "^2.5.5",
         "opn": "^5.3.0",
         "request": "^2.85.0",
         "request-promise": "^4.2.2",
