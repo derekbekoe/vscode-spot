@@ -1,4 +1,4 @@
-import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, InputBoxOptions } from 'vscode';
+import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem } from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
 import opn = require('opn');
@@ -7,7 +7,8 @@ import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue, randomBytes } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { SpotFileTracker, openFileEditor } from './spotFiles';
-import { SpotSession, deploymentTemplate } from './session';
+import { SpotSession } from './session';
+import { deploymentTemplate } from './spotDeploy';
 import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
 
 let reporter: TelemetryReporter;
