@@ -1,4 +1,4 @@
-import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem } from 'vscode';
+import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem } from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
 import opn = require('opn');
@@ -90,8 +90,7 @@ function cmdSpotCreate() {
                 return
             }
             window.showInformationMessage(`Creating spot ${spotName}`);
-            // TODO Ideally 256
-            randomBytes(10).then((buffer) => {
+            randomBytes(256).then((buffer) => {
                 const instanceToken = buffer.toString('hex');
                 // TODO Create the RG if it doesn't exist
                 const resourceGroupName: string = 'debekoe-spot';
@@ -119,9 +118,14 @@ function cmdSpotCreate() {
                     .then((res: ResourceModels.DeploymentExtended) => {
                         console.log('Deployment provisioningState', res.properties!.provisioningState);
                         console.log('Deployment correlationId', res.properties!.correlationId);
-                        // TODO Show notification when done with button to connect...
-                        // connectToSpot(spotName, mockToken);
-                        window.showInformationMessage('Spot created successfully');
+                        const connectItem: MessageItem = {title: 'Connect'};
+                        window.showInformationMessage('Spot created successfully', connectItem)
+                        .then((msgItem: MessageItem | undefined) => {
+                            if (msgItem === connectItem) {
+                                const hostname = `https://spot-${spotName}.westus.azurecontainer.io:443`;
+                                connectToSpot(hostname, instanceToken);
+                            }
+                        });
                     })
                     .catch((reason: any) => {
                         console.error(reason);
