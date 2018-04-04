@@ -53,10 +53,6 @@ function updateStatusBar(text: string) {
     statusBarItem.show();
 }
 
-function mockDelay(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function cmdSpotCreate() {
     reporter.sendTelemetryEvent('onCommand/spotCreate');
     if (!azureAccount) {
