@@ -1,24 +1,30 @@
-import { window, ExtensionContext, commands, StatusBarAlignment, StatusBarItem } from 'vscode';
+import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem } from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
 import opn = require('opn');
+import { AzureAccount, AzureSubscription } from './azure-account.api';
 import { createTelemetryReporter } from './telemetry';
-import { createServer, readJSON, Queue } from './ipc';
+import { createServer, readJSON, Queue, randomBytes } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { SpotFileTracker, openFileEditor } from './spotFiles';
 import { SpotSession } from './session';
+import { deploymentTemplate } from './spotDeploy';
+import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
 let statusBarItem: StatusBarItem;
 let activeSession: SpotSession | null;
 let spotFileTracker: SpotFileTracker;
+let azureAccount: AzureAccount | undefined;
 
 export function activate(context: ExtensionContext) {
     reporter = createTelemetryReporter(context);
     statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
     context.subscriptions.push(statusBarItem);
     spotFileTracker = new SpotFileTracker();
+    const azureAccountExtension: Extension<AzureAccount> | undefined = extensions.getExtension<AzureAccount>('ms-vscode.azure-account');
+    azureAccount = azureAccountExtension ? azureAccountExtension.exports : undefined;
     spotTreeDataProvider = new SpotTreeDataProvider(spotFileTracker);
     window.registerTreeDataProvider('spotExplorer', spotTreeDataProvider);
     context.subscriptions.push(commands.registerCommand('spot.Create', cmdSpotCreate));
@@ -47,25 +53,79 @@ function updateStatusBar(text: string) {
     statusBarItem.show();
 }
 
-function mockDelay(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function cmdSpotCreate() {
     reporter.sendTelemetryEvent('onCommand/spotCreate');
-    window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true}).then((spotName) => {
+    if (!azureAccount) {
+        window.showErrorMessage("The Azure Account Extension is required to create spots");
+        return;
+    }
+    if (azureAccount.status !== 'LoggedIn') {
+        window.showWarningMessage("Log in and try again.");
+        commands.executeCommand("azure-account.login");
+        return;
+    }
+    const candidateSubscriptions = azureAccount.filters.filter((sub: AzureSubscription) => {
+        if (sub.subscription.id === undefined || sub.subscription.displayName === undefined || sub.subscription.subscriptionId === undefined || sub.subscription.state !== 'Enabled') {
+            return false;
+        }
+        return true;
+    });
+    if (candidateSubscriptions.length !== 1) {
+        window.showWarningMessage("Choose a single enabled Azure subscription and try again.");
+        commands.executeCommand("azure-account.selectSubscriptions");
+        return;
+    }
+    window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true, validateInput: (val) => {
+        return !val.includes(' ') ? null : 'Name cannot contain spaces';
+    }}).then((spotName) => {
         if (!spotName) {
             return;
         }
-        const items: string[] = ['ASP.NET webapp', 'Python Flask webapp'];
-        window.showQuickPick(items).then((val) => {
+        window.showInputBox({placeHolder: 'Container image name (e.g. ubuntu:xenial)', ignoreFocusOut: true}).then((imageName) => {
+            if (!imageName) {
+                return
+            }
             window.showInformationMessage(`Creating spot ${spotName}`);
-            // TODO Actually create the spot here.
-            // TODO Save hostname and token in file so it can be connected to.
-            mockDelay(5000).then(() => {
-                const mockToken = 's9kZHwTzJuH8YLQnWKPe';
-                window.showInformationMessage(`Spot created`);
-                connectToSpot(spotName, mockToken);
+            randomBytes(256).then((buffer) => {
+                const instanceToken = buffer.toString('hex');
+                // TODO Create the RG if it doesn't exist
+                const resourceGroupName: string = 'debekoe-spot';
+                const date = new Date();
+                const dateDay = date.getUTCDate();
+                const dateMonth = date.getUTCMonth();
+                const dateYr = date.getUTCFullYear();
+                const dateHr = date.getUTCHours();
+                const dateMin = date.getUTCMinutes();
+                const dateSec = date.getUTCSeconds();
+                const deploymentName: string = `spot-deployment-${dateDay}-${dateMonth}-${dateYr}-${dateHr}-${dateMin}-${dateSec}`;
+                deploymentTemplate.variables.spotName = `${spotName}`;
+                deploymentTemplate.variables.container1image = imageName;
+                deploymentTemplate.variables.instanceToken = instanceToken;
+                const deploymentOptions: ResourceModels.Deployment = {
+                    properties: {
+                        mode: 'Incremental',
+                        template: deploymentTemplate
+                    }
+                };
+                console.log(deploymentTemplate);
+                const rmClient = new ResourceManagementClient(candidateSubscriptions[0].session.credentials, candidateSubscriptions[0].subscription.subscriptionId!);
+                rmClient.deployments.createOrUpdate(resourceGroupName,
+                    deploymentName, deploymentOptions)
+                    .then((res: ResourceModels.DeploymentExtended) => {
+                        console.log('Deployment provisioningState', res.properties!.provisioningState);
+                        console.log('Deployment correlationId', res.properties!.correlationId);
+                        const connectItem: MessageItem = {title: 'Connect'};
+                        window.showInformationMessage('Spot created successfully', connectItem)
+                        .then((msgItem: MessageItem | undefined) => {
+                            if (msgItem === connectItem) {
+                                const hostname = `https://${spotName}.westus.azurecontainer.io:443`;
+                                connectToSpot(hostname, instanceToken);
+                            }
+                        });
+                    })
+                    .catch((reason: any) => {
+                        console.error(reason);
+                    });
             });
         });
     });
