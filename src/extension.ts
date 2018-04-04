@@ -102,7 +102,7 @@ function cmdSpotCreate() {
                 const dateMin = date.getUTCMinutes();
                 const dateSec = date.getUTCSeconds();
                 const deploymentName: string = `spot-deployment-${dateDay}-${dateMonth}-${dateYr}-${dateHr}-${dateMin}-${dateSec}`;
-                deploymentTemplate.variables.spotName = `spot-${spotName}`;
+                deploymentTemplate.variables.spotName = `${spotName}`;
                 deploymentTemplate.variables.container1image = imageName;
                 deploymentTemplate.variables.instanceToken = instanceToken;
                 const deploymentOptions: ResourceModels.Deployment = {
@@ -122,7 +122,7 @@ function cmdSpotCreate() {
                         window.showInformationMessage('Spot created successfully', connectItem)
                         .then((msgItem: MessageItem | undefined) => {
                             if (msgItem === connectItem) {
-                                const hostname = `https://spot-${spotName}.westus.azurecontainer.io:443`;
+                                const hostname = `https://${spotName}.westus.azurecontainer.io:443`;
                                 connectToSpot(hostname, instanceToken);
                             }
                         });

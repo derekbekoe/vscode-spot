@@ -24,6 +24,9 @@ export var deploymentTemplate = {
         "type": "Microsoft.ContainerInstance/containerGroups",
         "apiVersion": "2018-02-01-preview",
         "location": "[variables('location')]",
+        "tags": {
+            "isSpot": "true"
+        },
         "properties": {
           "containers": [
             {
