@@ -7,8 +7,8 @@ import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue, randomBytes } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { SpotFileTracker, openFileEditor } from './spotFiles';
-import { SpotSession } from './session';
-import { ResourceManagementClient } from 'azure-arm-resource';
+import { SpotSession, deploymentTemplate } from './session';
+import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -78,7 +78,6 @@ function cmdSpotCreate() {
         commands.executeCommand("azure-account.selectSubscriptions");
         return;
     }
-    console.log(candidateSubscriptions);
     window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true, validateInput: (val) => {
         return !val.includes(' ') ? null : 'Name cannot contain spaces';
     }}).then((spotName) => {
@@ -90,13 +89,44 @@ function cmdSpotCreate() {
                 return
             }
             window.showInformationMessage(`Creating spot ${spotName}`);
-            randomBytes(256).then((buffer) => {
+            // TODO Ideally 256
+            randomBytes(10).then((buffer) => {
                 const instanceToken = buffer.toString('hex');
                 // TODO Actually create the spot here.
-                // ResourceManagementClient.prototype.deployments.createOrUpdate
-                // parameters: "spotName, container1image, instanceToken"
-                // TODO Show notification when done with button to connect...
-                // connectToSpot(spotName, mockToken);
+                // TODO Create the RG if it doesn't exist
+                const resourceGroupName: string = 'debekoe-spot';
+                const date = new Date();
+                const dateDay = date.getUTCDate();
+                const dateMonth = date.getUTCMonth();
+                const dateYr = date.getUTCFullYear();
+                const dateHr = date.getUTCHours();
+                const dateMin = date.getUTCMinutes();
+                const dateSec = date.getUTCSeconds();
+                const deploymentName: string = `spot-deployment-${dateDay}-${dateMonth}-${dateYr}-${dateHr}-${dateMin}-${dateSec}`;
+                deploymentTemplate.variables.spotName = `spot-${spotName}`;
+                deploymentTemplate.variables.container1image = imageName;
+                deploymentTemplate.variables.instanceToken = instanceToken;
+                const deploymentOptions: ResourceModels.Deployment = {
+                    properties: {
+                        mode: 'Incremental',
+                        template: deploymentTemplate
+                    }
+                };
+                console.log(deploymentTemplate);
+                // return;
+                const rmClient = new ResourceManagementClient(candidateSubscriptions[0].session.credentials, candidateSubscriptions[0].subscription.subscriptionId!);
+                rmClient.deployments.createOrUpdate(resourceGroupName,
+                    deploymentName, deploymentOptions)
+                    .then((res: ResourceModels.DeploymentExtended) => {
+                        console.log('Deployment provisioningState', res.properties!.provisioningState);
+                        console.log('Deployment correlationId', res.properties!.correlationId);
+                        // TODO Show notification when done with button to connect...
+                        // connectToSpot(spotName, mockToken);
+                        window.showInformationMessage('Spot created successfully');
+                    })
+                    .catch((reason: any) => {
+                        console.error(reason);
+                    });
             });
         });
     });
