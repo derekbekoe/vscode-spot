@@ -93,7 +93,6 @@ function cmdSpotCreate() {
             // TODO Ideally 256
             randomBytes(10).then((buffer) => {
                 const instanceToken = buffer.toString('hex');
-                // TODO Actually create the spot here.
                 // TODO Create the RG if it doesn't exist
                 const resourceGroupName: string = 'debekoe-spot';
                 const date = new Date();
@@ -114,7 +113,6 @@ function cmdSpotCreate() {
                     }
                 };
                 console.log(deploymentTemplate);
-                // return;
                 const rmClient = new ResourceManagementClient(candidateSubscriptions[0].session.credentials, candidateSubscriptions[0].subscription.subscriptionId!);
                 rmClient.deployments.createOrUpdate(resourceGroupName,
                     deploymentName, deploymentOptions)

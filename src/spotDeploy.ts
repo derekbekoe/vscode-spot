@@ -3,8 +3,8 @@ export var deploymentTemplate = {
     "contentVersion": "1.0.0.0",
     "parameters": {},
     "variables": {
-      "spotName": "spot-1",
-      "container1image": "ubuntu:xenial",
+      "spotName": "spotName",
+      "container1image": "imageName",
       "location": "westus",
       "instanceToken": "myToken",
       "container1name": "client",
