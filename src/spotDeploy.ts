@@ -22,7 +22,7 @@ export var deploymentTemplate = {
       {
         "name": "[variables('spotName')]",
         "type": "Microsoft.ContainerInstance/containerGroups",
-        "apiVersion": "2018-02-01-preview",
+        "apiVersion": "2018-04-01",
         "location": "[variables('location')]",
         "tags": {
             "isSpot": "true"
@@ -44,29 +44,38 @@ export var deploymentTemplate = {
                 },
                 "ports": [
                   {
+                    "protocol": "TCP",
                     "port": 80
                   },
                   {
+                    "protocol": "TCP",
                     "port": 443
                   },
                   {
-                    "port": 5000
+                    "protocol": "TCP",
+                    "port": 5001
                   },
                   {
-                    "port": 6006
+                    "protocol": "TCP",
+                    "port": 5002
                   },
                   {
-                    "port": 8080
+                    "protocol": "TCP",
+                    "port": 5003
                   }
                 ],
                 "environmentVariables": [
                   {
                     "name": "PORT",
-                    "value": "443"
+                    "value": "80"
+                  },
+                  {
+                    "name": "DEBUG",
+                    "value": "http,mail,express:*"
                   },
                   {
                     "name": "USE_SSL",
-                    "value": "1"
+                    "value": "0"
                   },
                   {
                     "name": "INSTANCE_TOKEN",
@@ -147,24 +156,24 @@ export var deploymentTemplate = {
             "dnsNameLabel": "[variables('spotName')]",
             "ports": [
               {
-                "protocol": "tcp",
-                "port": "443"
+                "protocol": "TCP",
+                "port": 80
               },
               {
-                "protocol": "tcp",
-                "port": "5000"
+                "protocol": "TCP",
+                "port": 443
               },
               {
-                "protocol": "tcp",
-                "port": "80"
+                "protocol": "TCP",
+                "port": 5001
               },
               {
-                "protocol": "tcp",
-                "port": "6006"
+                "protocol": "TCP",
+                "port": 5002
               },
               {
-                  "protocol": "tcp",
-                  "port": "8080"
+                "protocol": "TCP",
+                "port": 5003
               }
             ]
           },
