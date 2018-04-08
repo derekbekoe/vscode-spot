@@ -7,6 +7,7 @@ export var deploymentTemplate = {
       "container1image": "imageName",
       "location": "westus",
       "instanceToken": "myToken",
+      "useSSL": "1",
       "container1name": "client",
       "container2image": "certbot/certbot",
       "container2name": "certbot",
@@ -75,7 +76,7 @@ export var deploymentTemplate = {
                   },
                   {
                     "name": "USE_SSL",
-                    "value": "0"
+                    "value": "[variables('useSSL')]"
                   },
                   {
                     "name": "INSTANCE_TOKEN",

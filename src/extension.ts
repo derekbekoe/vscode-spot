@@ -101,6 +101,16 @@ function cmdSpotCreate() {
                 deploymentTemplate.variables.spotName = `${spotName}`;
                 deploymentTemplate.variables.container1image = imageName;
                 deploymentTemplate.variables.instanceToken = instanceToken;
+                const useSSL = false;
+                // TODO Re-enable SSL. There are currently 2 issues with enabling SSL:
+                // 1. Port mapping fails with multiple containers in group so we can only deploy one
+                // 2. Lets Encrypt Rate Limits can sometimes cause domain verification to fail
+                if (!useSSL) {
+                    deploymentTemplate.variables.useSSL = '0';
+                    // remove the certbot container from the container group
+                    deploymentTemplate.resources[0].properties.containers.splice(1, 1);
+                }
+
                 const deploymentOptions: ResourceModels.Deployment = {
                     properties: {
                         mode: 'Incremental',
@@ -118,7 +128,7 @@ function cmdSpotCreate() {
                         window.showInformationMessage('Spot created successfully', connectItem)
                         .then((msgItem: MessageItem | undefined) => {
                             if (msgItem === connectItem) {
-                                const hostname = `https://${spotName}.westus.azurecontainer.io:443`;
+                                const hostname = useSSL ? `https://${spotName}.westus.azurecontainer.io:443` : `http://${spotName}.westus.azurecontainer.io:80`;
                                 connectToSpot(hostname, instanceToken);
                             }
                         });
