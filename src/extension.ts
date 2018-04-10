@@ -3,6 +3,7 @@ import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
 import * as request from 'request';
 import opn = require('opn');
+import { URL } from 'url';
 import { AzureAccount, AzureSubscription } from './azure-account.api';
 import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue, randomBytes } from './ipc';
@@ -239,9 +240,18 @@ function cmdSpotConnect() {
             const mockToken = 's9kZHwTzJuH8YLQnWKPe';
             connectToSpot(spotName, mockToken);
         } else {
+            if (spotName.indexOf('azurecontainer.io') > -1 && spotName.indexOf('?token=') > -1) {
+                // If full URL provided, no need to ask for token
+                const spotURL = new URL(spotName);
+                const spotPort = spotURL.protocol.startsWith('https') ? '443' : '80';
+                var spotToken = spotName.substring(spotName.indexOf('?token=') + '?token='.length);
+                spotName = `${spotURL.origin}:${spotPort}`;
+                connectToSpot(spotName, spotToken);
+                return;
+            }
             window.showInputBox({placeHolder: 'Token for the spot.', password: true, ignoreFocusOut: true}).then((spotToken) => {
                 if (spotToken) {
-                    connectToSpot(spotName, spotToken);
+                    connectToSpot(spotName!, spotToken);
                 }
             });
         }
@@ -250,6 +260,10 @@ function cmdSpotConnect() {
 
 function cmdSpotDisconnect() {
     reporter.sendTelemetryEvent('onCommand/spotDisconnect');
+    disconnectFromSpot(activeSession);
+}
+
+function disconnectFromSpot(session: SpotSession | null) {
     if (activeSession != null) {
         // Check if there are any unsaved files from the spot
         for (var te of window.visibleTextEditors) {
@@ -271,6 +285,20 @@ function cmdSpotDisconnect() {
 
 function cmdSpotTerminate() {
     reporter.sendTelemetryEvent('onCommand/spotTerminate');
+    if (activeSession != null) {
+        const msgItem: MessageItem = {title: 'Disconnect'};
+        window.showWarningMessage('Disconnect from the current spot before terminating a spot.', msgItem)
+        .then((msgItem: MessageItem | undefined) => {
+            if (msgItem === msgItem) {
+                disconnectFromSpot(activeSession);
+            }
+        });
+    } else {
+        terminateSpot();
+    }
+}
+
+function terminateSpot() {
     window.showInformationMessage('Terminating spot!');
     updateStatusBar('Not connected');
 }
