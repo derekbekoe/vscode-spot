@@ -114,7 +114,7 @@ export var deploymentTemplate = {
               "properties": {
                 "image": "[variables('container2image')]",
                 "command": [
-                  "/bin/sh", "-c", "/.spot/certbot_start.sh"
+                  "/bin/sh", "-c", "/.spot/certbot.sh"
                 ],
                 "resources": {
                   "requests": {
@@ -123,6 +123,10 @@ export var deploymentTemplate = {
                   }
                 },
                 "environmentVariables": [
+                  {
+                    "name": "USE_SSL",
+                    "value": "[variables('useSSL')]"
+                  },
                   {
                     "name": "C_DOMAIN",
                     "value": "[concat(variables('spotName'), '.', variables('location'), '.azurecontainer.io')]"

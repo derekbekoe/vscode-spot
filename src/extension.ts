@@ -1,6 +1,7 @@
 import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem } from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
+import * as request from 'request';
 import opn = require('opn');
 import { AzureAccount, AzureSubscription } from './azure-account.api';
 import { createTelemetryReporter } from './telemetry';
@@ -101,14 +102,10 @@ function cmdSpotCreate() {
                 deploymentTemplate.variables.spotName = `${spotName}`;
                 deploymentTemplate.variables.container1image = imageName;
                 deploymentTemplate.variables.instanceToken = instanceToken;
+                // TODO Re-enable SSL - Lets Encrypt Rate Limits can sometimes cause domain verification to fail
                 const useSSL = false;
-                // TODO Re-enable SSL. There are currently 2 issues with enabling SSL:
-                // 1. Port mapping fails with multiple containers in group so we can only deploy one
-                // 2. Lets Encrypt Rate Limits can sometimes cause domain verification to fail
                 if (!useSSL) {
                     deploymentTemplate.variables.useSSL = '0';
-                    // remove the certbot container from the container group
-                    deploymentTemplate.resources[0].properties.containers.splice(1, 1);
                 }
 
                 const deploymentOptions: ResourceModels.Deployment = {
@@ -117,24 +114,33 @@ function cmdSpotCreate() {
                         template: deploymentTemplate
                     }
                 };
-                console.log(deploymentTemplate);
+                console.log('Deployment template for spot creation', deploymentTemplate);
                 const rmClient = new ResourceManagementClient(candidateSubscriptions[0].session.credentials, candidateSubscriptions[0].subscription.subscriptionId!);
                 rmClient.deployments.createOrUpdate(resourceGroupName,
                     deploymentName, deploymentOptions)
                     .then((res: ResourceModels.DeploymentExtended) => {
                         console.log('Deployment provisioningState', res.properties!.provisioningState);
                         console.log('Deployment correlationId', res.properties!.correlationId);
-                        const connectItem: MessageItem = {title: 'Connect'};
-                        window.showInformationMessage('Spot created successfully', connectItem)
-                        .then((msgItem: MessageItem | undefined) => {
-                            if (msgItem === connectItem) {
-                                const hostname = useSSL ? `https://${spotName}.westus.azurecontainer.io:443` : `http://${spotName}.westus.azurecontainer.io:80`;
-                                connectToSpot(hostname, instanceToken);
+                        console.log('Deployment completed');
+                        const hostname = useSSL ? `https://${spotName}.westus.azurecontainer.io:443` : `http://${spotName}.westus.azurecontainer.io:80`;
+                        console.log(`Requesting health check from ${hostname}`);
+                        request.get(`${hostname}/health-check?token=${instanceToken}`, {timeout: 60*1000}, (err, res, body) => {
+                            if (err) {
+                                return console.error('Spot health check failed', err);
                             }
+                            console.log('Health check successful.', body);
+                            const connectItem: MessageItem = {title: 'Connect'};
+                            window.showInformationMessage('Spot created successfully', connectItem)
+                            .then((msgItem: MessageItem | undefined) => {
+                                if (msgItem === connectItem) {
+                                    connectToSpot(hostname, instanceToken);
+                                }
+                            });
                         });
                     })
                     .catch((reason: any) => {
-                        console.error(reason);
+                        console.error('Deployment failed', reason);
+                        window.showErrorMessage(`Unable to create spot: ${reason}`);
                     });
             });
         });
