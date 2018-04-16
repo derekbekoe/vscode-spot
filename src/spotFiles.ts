@@ -111,7 +111,7 @@ export function openFileEditor(documentPath: any, session: SpotSession) {
     var data = {'event': 'fileDownload', 'path': documentPath};
     ws!.send(JSON.stringify(data));
   });
-  ws.on('message', (data:  Buffer) => {
+  ws.on('message', (data: Buffer) => {
     if (!storagePath) {
       console.error('storagePath is undefined!');
       return;
