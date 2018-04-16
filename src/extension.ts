@@ -131,7 +131,6 @@ function cmdSpotCreate() {
                 deploymentTemplate.variables.container1image = imageName;
                 deploymentTemplate.variables.instanceToken = instanceToken;
                 deploymentTemplate.variables.certbotEmail = azureSub.session.userId;
-                // TODO Re-enable SSL by default (also, see package.json default value)
                 const useSSL = workspace.getConfiguration('spot').get('createSpotWithSSLEnabled', false);
                 if (useSSL) {
                     console.log('Spot will be created with SSL enabled.');
