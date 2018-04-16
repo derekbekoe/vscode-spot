@@ -9,15 +9,16 @@ export var deploymentTemplate = {
       "location": "westus",
       "useSSL": "1",
       "container1name": "client",
+      "container1port": "443",
       "container2image": "certbot/certbot",
       "container2name": "certbot",
-      "certbotEmail": "git@github.com",
-      "azureFileShareName1": "myFileShare",
-      "azureStorageAccountName1": "myStorageAccountName",
-      "azureStorageAccountKey1": "myStorageAccountKey",
-      "azureFileShareName2": "myFileShare",
-      "azureStorageAccountName2": "myStorageAccountName",
-      "azureStorageAccountKey2": "myStorageAccountKey"
+      "certbotEmail": "vscodespot@derekbekoe.com",
+      "azureFileShareName1": "spot-host-1",
+      "azureStorageAccountName1": "derekb",
+      "azureStorageAccountKey1": "Lidr/bhz4E47bHivz4q+MZKRc4vx8ZNLmMJ9T+CiUjz0FMkdw9t5qzKUExuej3tPowNZ1QNKrUvivDmOYBY0Bw==",
+      "azureFileShareName2": "spot-instance-demo-2",
+      "azureStorageAccountName2": "derekb",
+      "azureStorageAccountKey2": "Lidr/bhz4E47bHivz4q+MZKRc4vx8ZNLmMJ9T+CiUjz0FMkdw9t5qzKUExuej3tPowNZ1QNKrUvivDmOYBY0Bw=="
     },
     "resources": [
       {
@@ -68,7 +69,7 @@ export var deploymentTemplate = {
                 "environmentVariables": [
                   {
                     "name": "PORT",
-                    "value": "80"
+                    "value": "[variables('container1port')]"
                   },
                   {
                     "name": "DEBUG",

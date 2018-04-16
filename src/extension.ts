@@ -1,7 +1,8 @@
 import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem } from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
-import * as request from 'request';
+// import * as request from 'request';
+import * as requestretry from 'requestretry';
 import opn = require('opn');
 import { URL } from 'url';
 import { AzureAccount, AzureSubscription } from './azure-account.api';
@@ -103,10 +104,12 @@ function cmdSpotCreate() {
                 deploymentTemplate.variables.spotName = `${spotName}`;
                 deploymentTemplate.variables.container1image = imageName;
                 deploymentTemplate.variables.instanceToken = instanceToken;
+                deploymentTemplate.variables.certbotEmail = candidateSubscriptions[0].session.userId;
                 // TODO Re-enable SSL - Lets Encrypt Rate Limits can sometimes cause domain verification to fail
-                const useSSL = false;
+                const useSSL = true;
                 if (!useSSL) {
                     deploymentTemplate.variables.useSSL = '0';
+                    deploymentTemplate.variables.container1port = '80';
                 }
 
                 const deploymentOptions: ResourceModels.Deployment = {
@@ -125,7 +128,7 @@ function cmdSpotCreate() {
                         console.log('Deployment completed');
                         const hostname = useSSL ? `https://${spotName}.westus.azurecontainer.io:443` : `http://${spotName}.westus.azurecontainer.io:80`;
                         console.log(`Requesting health check from ${hostname}`);
-                        request.get(`${hostname}/health-check?token=${instanceToken}`, {timeout: 60*1000}, (err, res, body) => {
+                        requestretry({url: `${hostname}/health-check?token=${instanceToken}`, timeout: 60*1000, maxAttempts: 5, retryDelay: 5000}, (err, res, body) => {
                             if (err) {
                                 return console.error('Spot health check failed', err);
                             }

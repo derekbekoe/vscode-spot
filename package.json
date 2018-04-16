@@ -81,6 +81,7 @@
     },
     "dependencies": {
         "@types/opn": "^5.1.0",
+        "@types/requestretry": "^1.12.3",
         "@types/rimraf": "^2.0.2",
         "@types/tmp": "0.0.33",
         "azure-arm-resource": "^3.1.1-preview",
@@ -89,6 +90,7 @@
         "opn": "^5.3.0",
         "request": "^2.85.0",
         "request-promise": "^4.2.2",
+        "requestretry": "^1.13.0",
         "rimraf": "^2.6.2",
         "tmp": "0.0.33",
         "vsce": "^1.37.6",
