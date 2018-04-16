@@ -135,6 +135,8 @@ function cmdSpotCreate() {
                 const useSSL = workspace.getConfiguration('spot').get('createSpotWithSSLEnabled', false);
                 if (useSSL) {
                     console.log('Spot will be created with SSL enabled.');
+                    deploymentTemplate.variables.useSSL = '1';
+                    deploymentTemplate.variables.container1port = '443';
                 } else {
                     console.log('Spot will be created with SSL disabled.');
                     deploymentTemplate.variables.useSSL = '0';
