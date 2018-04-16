@@ -34,13 +34,9 @@ A few steps to get you started right away.
 2. Install by following [VS Code extension install](https://code.visualstudio.com/docs/editor/extension-gallery#_install-from-a-vsix).
 3. Set up the file share.
     - Upload `spot-host-linux-0.1.9`, ` pty.node` and `certbot_start.sh` from [GitHub releases](https://github.com/derekbekoe/vscode-spot/releases/tag/v0.1.1) to the root of an Azure storage file share. Add the details as share 1 in the ARM template in the next step.
-4. Deploy [the ARM template](doc/armdeploy.json) into a resource group after modifying the variables.
-    `az group deployment create --resource-group myResourceGroup --name myDeploymentName --template-file armdeploy.json`
-5. Connect to the spot with `Spot: Connect`.
-    - First input box, type hostname & port: e.g. `https://spotName.westus.azurecontainer.io:443`
-    - Second input box, type the token you defined in the ARM template: e.g. `myToken`
+5. Create a Spot with `Spot: Create`.
 
-When done, `Spot: Disconnect`
+When done, `Spot: Disconnect` and then `Spot: Terminate` to shut down the instance.
 
 :exclamation: Spot utilizes [Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/). See [Container Instances pricing](https://azure.microsoft.com/en-us/pricing/details/container-instances/) for their pricing information.
 
