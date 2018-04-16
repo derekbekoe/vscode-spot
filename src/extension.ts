@@ -56,8 +56,7 @@ function updateStatusBar(text: string) {
     statusBarItem.show();
 }
 
-function cmdSpotCreate() {
-    reporter.sendTelemetryEvent('onCommand/spotCreate');
+function getAzureSubscription(): AzureSubscription | undefined {
     if (!azureAccount) {
         window.showErrorMessage("The Azure Account Extension is required to create spots");
         return;
@@ -76,6 +75,15 @@ function cmdSpotCreate() {
     if (candidateSubscriptions.length !== 1) {
         window.showWarningMessage("Choose a single enabled Azure subscription and try again.");
         commands.executeCommand("azure-account.selectSubscriptions");
+        return;
+    }
+    return candidateSubscriptions[0];
+}
+
+function cmdSpotCreate() {
+    reporter.sendTelemetryEvent('onCommand/spotCreate');
+    const azureSub = getAzureSubscription();
+    if (!azureSub) {
         return;
     }
     window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true, validateInput: (val) => {
@@ -104,7 +112,7 @@ function cmdSpotCreate() {
                 deploymentTemplate.variables.spotName = `${spotName}`;
                 deploymentTemplate.variables.container1image = imageName;
                 deploymentTemplate.variables.instanceToken = instanceToken;
-                deploymentTemplate.variables.certbotEmail = candidateSubscriptions[0].session.userId;
+                deploymentTemplate.variables.certbotEmail = azureSub.session.userId;
                 // TODO Re-enable SSL - Lets Encrypt Rate Limits can sometimes cause domain verification to fail
                 const useSSL = true;
                 if (!useSSL) {
@@ -119,7 +127,7 @@ function cmdSpotCreate() {
                     }
                 };
                 console.log('Deployment template for spot creation', deploymentTemplate);
-                const rmClient = new ResourceManagementClient(candidateSubscriptions[0].session.credentials, candidateSubscriptions[0].subscription.subscriptionId!);
+                const rmClient = new ResourceManagementClient(azureSub.session.credentials, azureSub.subscription.subscriptionId!);
                 rmClient.deployments.createOrUpdate(resourceGroupName,
                     deploymentName, deploymentOptions)
                     .then((res: ResourceModels.DeploymentExtended) => {
@@ -289,10 +297,10 @@ function disconnectFromSpot(session: SpotSession | null) {
 function cmdSpotTerminate() {
     reporter.sendTelemetryEvent('onCommand/spotTerminate');
     if (activeSession != null) {
-        const msgItem: MessageItem = {title: 'Disconnect'};
-        window.showWarningMessage('Disconnect from the current spot before terminating a spot.', msgItem)
+        const disConnectMsgItem: MessageItem = {title: 'Disconnect'};
+        window.showWarningMessage('Disconnect from the current spot before terminating a spot.', disConnectMsgItem)
         .then((msgItem: MessageItem | undefined) => {
-            if (msgItem === msgItem) {
+            if (disConnectMsgItem === msgItem) {
                 disconnectFromSpot(activeSession);
             }
         });
@@ -302,8 +310,41 @@ function cmdSpotTerminate() {
 }
 
 function terminateSpot() {
-    window.showInformationMessage('Terminating spot!');
-    updateStatusBar('Not connected');
+    const azureSub = getAzureSubscription();
+    if (!azureSub) {
+        return;
+    }
+    window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true}).then((spotName) => {
+        if (spotName) {
+            const confirmYesMsgItem = {title: 'Yes'};
+            const confirmNoMsgItem = {title: 'No'};
+            window.showWarningMessage(`Are you sure you want to delete the spot ${spotName}`, confirmYesMsgItem, confirmNoMsgItem)
+            .then((msgItem: MessageItem | undefined) => {
+                if (msgItem === confirmYesMsgItem) {
+                        console.log(`Attempting to terminate spot ${spotName}`);
+                        window.showInformationMessage(`Attempting to terminate spot ${spotName}`);
+                        const rmClient = new ResourceManagementClient(azureSub.session.credentials, azureSub.subscription.subscriptionId!);
+                        rmClient.resources.deleteMethod('debekoe-spot', "Microsoft.ContainerInstance", "",
+                                                        "containerGroups", spotName, "2018-04-01")
+                        .then(() => {
+                            console.log('Spot deleted');
+                            window.showInformationMessage('Spot terminated!');
+                        })
+                        .catch(() => {
+                            const portalMsgItem: MessageItem = {title: 'Azure Portal'};
+                            window.showErrorMessage('Unable to terminate spot. Open the Azure portal and delete the container group from there.', portalMsgItem)
+                            .then((msgItem: MessageItem | undefined) => {
+                                if (portalMsgItem === msgItem) {
+                                    opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
+                                }
+                            });
+                        });
+                    } else {
+                        console.log('User cancelled spot delete operation.');
+                    }
+                });
+        }
+        });
 }
 
 export function deactivate() {
