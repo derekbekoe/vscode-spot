@@ -83,6 +83,21 @@ function getAzureSubscription(): AzureSubscription | undefined {
     return candidateSubscriptions[0];
 }
 
+function spotHealthCheck(hostname: string, instanceToken: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+        console.log(`Requesting health check from ${hostname}`);
+        requestretry({url: `${hostname}/health-check?token=${instanceToken}`, timeout: 60*1000, maxAttempts: 5, retryDelay: 5000}, (err, res, body) => {
+            if (err) {
+                console.error('Spot health check failed', err);
+                reject(err);
+            } else {
+                console.log('Health check successful.', body);
+                resolve();
+            }
+        });
+    });
+}
+
 function cmdSpotCreate() {
     reporter.sendTelemetryEvent('onCommand/spotCreate');
     const azureSub = getAzureSubscription();
@@ -141,12 +156,8 @@ function cmdSpotCreate() {
                         console.log('Deployment correlationId', res.properties!.correlationId);
                         console.log('Deployment completed');
                         const hostname = useSSL ? `https://${spotName}.westus.azurecontainer.io:443` : `http://${spotName}.westus.azurecontainer.io:80`;
-                        console.log(`Requesting health check from ${hostname}`);
-                        requestretry({url: `${hostname}/health-check?token=${instanceToken}`, timeout: 60*1000, maxAttempts: 5, retryDelay: 5000}, (err, res, body) => {
-                            if (err) {
-                                return console.error('Spot health check failed', err);
-                            }
-                            console.log('Health check successful.', body);
+                        spotHealthCheck(hostname, instanceToken)
+                        .then(() => {
                             knownSpots.add(spotName, hostname, instanceToken);
                             const connectItem: MessageItem = {title: 'Connect'};
                             window.showInformationMessage('Spot created successfully', connectItem)
@@ -155,6 +166,9 @@ function cmdSpotCreate() {
                                     connectToSpot(hostname, instanceToken);
                                 }
                             });
+                        })
+                        .catch((err) => {
+                            console.error('Spot health check failed', err);
                         });
                     })
                     .catch((reason: any) => {
@@ -217,10 +231,9 @@ async function createSpotConsole(session: SpotSession): Promise<void> {
 }
 
 function connectToSpot(hostname: string, token: string): Promise<null> {
-    // TODO Actually check the connection
-    const mockConnectSuccess = true;
     return new Promise((resolve, reject) => {
-        if (mockConnectSuccess) {
+        spotHealthCheck(hostname, token)
+        .then(() => {
             activeSession = new SpotSession(hostname, token);
             spotFileTracker.connect(activeSession);
             createSpotConsole(activeSession).then(() => {
@@ -233,14 +246,15 @@ function connectToSpot(hostname: string, token: string): Promise<null> {
                 commands.executeCommand('setContext', 'canShowSpotExplorer', false);
                 console.error('An error occurred whilst creating spot console.');
             });
-        } else {
+        })
+        .catch((err) => {
             activeSession = null;
             commands.executeCommand('setContext', 'canShowSpotExplorer', false);
             window.showErrorMessage(`Failed to connect to ${hostname}`);
             updateStatusBar('Not connected');
             statusBarItem.show();
             reject();
-        }
+        });
     });
 }
 
