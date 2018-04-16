@@ -1,18 +1,19 @@
-import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem } from 'vscode';
+import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem, workspace, Memento } from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
-// import * as request from 'request';
 import * as requestretry from 'requestretry';
 import opn = require('opn');
 import { URL } from 'url';
 import { AzureAccount, AzureSubscription } from './azure-account.api';
+import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
+
 import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue, randomBytes } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { SpotFileTracker, openFileEditor } from './spotFiles';
 import { SpotSession } from './session';
 import { deploymentTemplate } from './spotDeploy';
-import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
+import { KnownSpots } from './spotUtil';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -20,12 +21,14 @@ let statusBarItem: StatusBarItem;
 let activeSession: SpotSession | null;
 let spotFileTracker: SpotFileTracker;
 let azureAccount: AzureAccount | undefined;
+let knownSpots: KnownSpots;
 
 export function activate(context: ExtensionContext) {
     reporter = createTelemetryReporter(context);
     statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
     context.subscriptions.push(statusBarItem);
     spotFileTracker = new SpotFileTracker();
+    knownSpots = new KnownSpots();
     const azureAccountExtension: Extension<AzureAccount> | undefined = extensions.getExtension<AzureAccount>('ms-vscode.azure-account');
     azureAccount = azureAccountExtension ? azureAccountExtension.exports : undefined;
     spotTreeDataProvider = new SpotTreeDataProvider(spotFileTracker);
@@ -113,9 +116,12 @@ function cmdSpotCreate() {
                 deploymentTemplate.variables.container1image = imageName;
                 deploymentTemplate.variables.instanceToken = instanceToken;
                 deploymentTemplate.variables.certbotEmail = azureSub.session.userId;
-                // TODO Re-enable SSL - Lets Encrypt Rate Limits can sometimes cause domain verification to fail
-                const useSSL = true;
-                if (!useSSL) {
+                // TODO Re-enable SSL by default (also, see package.json default value)
+                const useSSL = workspace.getConfiguration('spot').get('createSpotWithSSLEnabled', false);
+                if (useSSL) {
+                    console.log('Spot will be created with SSL enabled.');
+                } else {
+                    console.log('Spot will be created with SSL disabled.');
                     deploymentTemplate.variables.useSSL = '0';
                     deploymentTemplate.variables.container1port = '80';
                 }
@@ -141,6 +147,7 @@ function cmdSpotCreate() {
                                 return console.error('Spot health check failed', err);
                             }
                             console.log('Health check successful.', body);
+                            knownSpots.add(spotName, hostname, instanceToken);
                             const connectItem: MessageItem = {title: 'Connect'};
                             window.showInformationMessage('Spot created successfully', connectItem)
                             .then((msgItem: MessageItem | undefined) => {
@@ -157,11 +164,6 @@ function cmdSpotCreate() {
             });
         });
     });
-}
-
-function isKnownSpot(spotName: string) {
-    const knownSpots: string[] = ['blue-mountain-123'];
-    return knownSpots.indexOf(spotName) > -1;
 }
 
 const ipcQueue = new Queue<any>();
@@ -215,6 +217,7 @@ async function createSpotConsole(session: SpotSession): Promise<void> {
 }
 
 function connectToSpot(hostname: string, token: string): Promise<null> {
+    // TODO Actually check the connection
     const mockConnectSuccess = true;
     return new Promise((resolve, reject) => {
         if (mockConnectSuccess) {
@@ -243,13 +246,14 @@ function connectToSpot(hostname: string, token: string): Promise<null> {
 
 function cmdSpotConnect() {
     reporter.sendTelemetryEvent('onCommand/spotConnect');
-    window.showInputBox({placeHolder: 'Spot to connect to.', ignoreFocusOut: true}).then((spotName) => {
+    const spotNamePrompt = Object.keys(knownSpots.getAll()).length > 0 ? `Known spots: ${Array.from(Object.keys(knownSpots.getAll()))}` : undefined;
+    window.showInputBox({placeHolder: 'Spot to connect to.', ignoreFocusOut: true, prompt: spotNamePrompt}).then((spotName) => {
         if (!spotName) {
             return;
         }
-        if (isKnownSpot(spotName)) {
-            const mockToken = 's9kZHwTzJuH8YLQnWKPe';
-            connectToSpot(spotName, mockToken);
+        if (knownSpots.isKnown(spotName)) {
+            const spot = knownSpots.get(spotName);
+            connectToSpot(spot.hostname, spot.instanceToken);
         } else {
             if (spotName.indexOf('azurecontainer.io') > -1 && spotName.indexOf('?token=') > -1) {
                 // If full URL provided, no need to ask for token
@@ -314,7 +318,8 @@ function terminateSpot() {
     if (!azureSub) {
         return;
     }
-    window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true}).then((spotName) => {
+    const spotNamePrompt = Object.keys(knownSpots.getAll()).length > 0 ? `Known spots: ${Array.from(Object.keys(knownSpots.getAll()))}` : undefined;
+    window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true, prompt: spotNamePrompt}).then((spotName) => {
         if (spotName) {
             const confirmYesMsgItem = {title: 'Yes'};
             const confirmNoMsgItem = {title: 'No'};
@@ -327,6 +332,7 @@ function terminateSpot() {
                         rmClient.resources.deleteMethod('debekoe-spot', "Microsoft.ContainerInstance", "",
                                                         "containerGroups", spotName, "2018-04-01")
                         .then(() => {
+                            knownSpots.remove(spotName);
                             console.log('Spot deleted');
                             window.showInformationMessage('Spot terminated!');
                         })

@@ -1,5 +1,6 @@
 import { window, Uri, workspace, TextDocumentWillSaveEvent, EventEmitter, Event, TextDocumentSaveReason } from 'vscode';
 import { SpotSession } from './session';
+import { ensureDirectoryExistence } from './spotUtil';
 import { URL } from 'url';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
@@ -82,15 +83,6 @@ export class SpotFileTracker {
       rimraf.sync(dirname);
     }
   }
-}
-
-function ensureDirectoryExistence(filePath: string) {
-  var dirname = path.dirname(filePath);
-  if (fs.existsSync(dirname)) {
-    return true;
-  }
-  ensureDirectoryExistence(dirname);
-  fs.mkdirSync(dirname);
 }
 
 var tmpobj = tmp.dirSync();

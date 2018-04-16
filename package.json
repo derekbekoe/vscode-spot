@@ -1,6 +1,6 @@
 {
     "name": "vscode-spot",
-    "description": "VS Code extension for the Spot service.",
+    "description": "Instant cloud environments for developers.",
     "version": "0.1.2",
     "publisher": "derek-bekoe",
     "repository": {
@@ -58,7 +58,18 @@
                 "title": "Terminate",
                 "category": "Spot"
             }
-        ]
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "Spot Configuration",
+            "properties": {
+                "spot.createSpotWithSSLEnabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Create new spots with SSL enabled. Disable this if you are having issues with Let's Encrypt."
+                }
+            }
+        }
     },
     "scripts": {
         "vscode:prepublish": "tsc -p ./",
