@@ -13,12 +13,12 @@ export var deploymentTemplate = {
       "container2image": "certbot/certbot",
       "container2name": "certbot",
       "certbotEmail": "vscodespot@derekbekoe.com",
-      "azureFileShareName1": "spot-host-1",
-      "azureStorageAccountName1": "derekb",
-      "azureStorageAccountKey1": "Lidr/bhz4E47bHivz4q+MZKRc4vx8ZNLmMJ9T+CiUjz0FMkdw9t5qzKUExuej3tPowNZ1QNKrUvivDmOYBY0Bw==",
-      "azureFileShareName2": "spot-instance-demo-2",
-      "azureStorageAccountName2": "derekb",
-      "azureStorageAccountKey2": "Lidr/bhz4E47bHivz4q+MZKRc4vx8ZNLmMJ9T+CiUjz0FMkdw9t5qzKUExuej3tPowNZ1QNKrUvivDmOYBY0Bw=="
+      "azureFileShareName1": "",
+      "azureStorageAccountName1": "",
+      "azureStorageAccountKey1": "",
+      "azureFileShareName2": "",
+      "azureStorageAccountName2": "",
+      "azureStorageAccountKey2": ""
     },
     "resources": [
       {
@@ -36,7 +36,7 @@ export var deploymentTemplate = {
               "properties": {
                 "image": "[variables('container1image')]",
                 "command": [
-                  "/bin/sh", "-c", "/.spot/spot-host-linux-0.1.9"
+                  "/bin/sh", "-c", "/.spot/spot-host"
                 ],
                 "resources": {
                   "requests": {

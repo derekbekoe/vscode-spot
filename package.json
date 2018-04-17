@@ -63,10 +63,30 @@
             "type": "object",
             "title": "Spot Configuration",
             "properties": {
+                "spot.azureResourceGroup": {
+                    "type": "string",
+                    "description": "The resource group to deploy spots into."
+                },
+                "spot.azureFileShareName1": {
+                    "type": "string",
+                    "description": "The file share name containing the spot host."
+                },
+                "spot.azureStorageAccountName": {
+                    "type": "string",
+                    "description": "The storage account name containing the file share."
+                },
+                "spot.azureStorageAccountKey": {
+                    "type": "string",
+                    "description": "The storage account key for the storage account."
+                },
+                "spot.azureFileShareName2": {
+                    "type": "string",
+                    "description": "(optional) The file share name you want to mount for persistent storage."
+                },
                 "spot.createSpotWithSSLEnabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Create new spots with SSL enabled. Disable this if you are having issues with Let's Encrypt."
+                    "description": "(optional) Create new spots with SSL enabled. Disable this if you are having issues with Let's Encrypt."
                 }
             }
         }

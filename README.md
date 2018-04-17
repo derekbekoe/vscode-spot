@@ -30,11 +30,32 @@ Developer tools are becoming more cloud powered. Scaling beyond what the user’
 
 A few steps to get you started right away.
 
-1. Get the VS Code extension (vsix) from [releases](https://github.com/derekbekoe/vscode-spot/releases).
-2. Install by following [VS Code extension install](https://code.visualstudio.com/docs/editor/extension-gallery#_install-from-a-vsix).
-3. Set up the file share.
-    - Upload `spot-host-linux-0.1.9`, ` pty.node` and `certbot_start.sh` from [GitHub releases](https://github.com/derekbekoe/vscode-spot/releases/tag/v0.1.1) to the root of an Azure storage file share. Add the details as share 1 in the ARM template in the next step.
-5. Create a Spot with `Spot: Create`.
+#### Azure File Share
+
+Set up an Azure File Share with the following files at the root of the file share:  
+    - https://vscodespot.blob.core.windows.net/preview/spot-host  
+    - https://vscodespot.blob.core.windows.net/preview/pty.node  
+    - https://vscodespot.blob.core.windows.net/preview/certbot.sh  
+
+#### Configuration
+
+| Name | Description |
+| --- |---|
+| `spot.azureResourceGroup`     | The resource group to deploy spots into.
+| `spot.azureStorageAccountName`    | The storage account name containing the file share.
+| `spot.azureStorageAccountKey` | The storage account key for the storage account.
+| `spot.azureFileShareName1`  | The file share name containing the spot host.
+| `spot.azureFileShareName2`  | (optional) The file share name you want to mount for persistent storage.
+| `spot.createSpotWithSSLEnabled`  | (optional) Create new spots with SSL enabled. Disable this if you are having issues with Let's Encrypt.
+
+#### Log in to Azure
+
+If not already logged in, log in to Azure inside VS Code with `Azure: Log In`.
+Use `Azure: Select Subscriptions` to select an appropriate subscription.
+
+#### Create a Spot
+
+Create a Spot with `Spot: Create`.
 
 When done, `Spot: Disconnect` and then `Spot: Terminate` to shut down the instance.
 
@@ -52,6 +73,8 @@ When done, `Spot: Disconnect` and then `Spot: Terminate` to shut down the instan
 
 ## Known Limitations
 
+- VS Code Extension only supports Linux/macOS
+    - Currently, the extension will not run correctly on Windows.
 - Intellisense & Debugging
     - Currently, there is no cross-file Intellisense or debugging
 - Image pull time
@@ -69,6 +92,8 @@ Looking to contribute or debug yourself?
 2. Open VS Code
 3. Run `npm install`
 4. Start the VS Code debugger to launch the extension
+
+Build the extension with `./node_modules/.bin/vsce package`.
 
 
 ## Release History

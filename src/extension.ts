@@ -104,6 +104,22 @@ function cmdSpotCreate() {
     if (!azureSub) {
         return;
     }
+    const resourceGroupName = workspace.getConfiguration('spot').get<string>('azureResourceGroup');
+    const azureFileShareName1 = workspace.getConfiguration('spot').get<string>('azureFileShareName1');
+    const azureFileShareName2 = workspace.getConfiguration('spot').get<string>('azureFileShareName2');
+    const azureStorageAccountName = workspace.getConfiguration('spot').get<string>('azureStorageAccountName');
+    const azureStorageAccountKey = workspace.getConfiguration('spot').get<string>('azureStorageAccountKey');
+
+    if (!resourceGroupName || !azureFileShareName1 || !azureStorageAccountName || !azureStorageAccountKey) {
+        const moreInfoItem: MessageItem = {title: 'More Info'};
+        window.showErrorMessage('Please set up the configuration variables.', moreInfoItem)
+        .then((msgItem: MessageItem | undefined) => {
+            if (msgItem === moreInfoItem) {
+                opn('https://github.com/derekbekoe/vscode-spot#configuration');
+            }
+        });
+        return;
+    }
     window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true, validateInput: (val) => {
         return !val.includes(' ') ? null : 'Name cannot contain spaces';
     }}).then((spotName) => {
@@ -114,11 +130,8 @@ function cmdSpotCreate() {
             if (!imageName) {
                 return
             }
-            window.showInformationMessage(`Creating spot ${spotName}`);
             randomBytes(256).then((buffer) => {
                 const instanceToken = buffer.toString('hex');
-                // TODO Create the RG if it doesn't exist
-                const resourceGroupName: string = 'debekoe-spot';
                 const date = new Date();
                 const dateDay = date.getUTCDate();
                 const dateMonth = date.getUTCMonth();
@@ -131,6 +144,14 @@ function cmdSpotCreate() {
                 deploymentTemplate.variables.container1image = imageName;
                 deploymentTemplate.variables.instanceToken = instanceToken;
                 deploymentTemplate.variables.certbotEmail = azureSub.session.userId;
+
+                deploymentTemplate.variables.azureFileShareName1 = azureFileShareName1;
+                deploymentTemplate.variables.azureFileShareName2 = azureFileShareName2 || azureFileShareName1;
+                deploymentTemplate.variables.azureStorageAccountName1 = azureStorageAccountName;
+                deploymentTemplate.variables.azureStorageAccountKey1 = azureStorageAccountKey;
+                deploymentTemplate.variables.azureStorageAccountName2 = azureStorageAccountName;
+                deploymentTemplate.variables.azureStorageAccountKey2 = azureStorageAccountKey;
+
                 const useSSL = workspace.getConfiguration('spot').get('createSpotWithSSLEnabled', false);
                 if (useSSL) {
                     console.log('Spot will be created with SSL enabled.');
@@ -149,6 +170,7 @@ function cmdSpotCreate() {
                     }
                 };
                 console.log('Deployment template for spot creation', deploymentTemplate);
+                window.showInformationMessage(`Creating spot ${spotName}`);
                 const rmClient = new ResourceManagementClient(azureSub.session.credentials, azureSub.subscription.subscriptionId!);
                 rmClient.deployments.createOrUpdate(resourceGroupName,
                     deploymentName, deploymentOptions)
@@ -344,7 +366,18 @@ function terminateSpot() {
                         console.log(`Attempting to terminate spot ${spotName}`);
                         window.showInformationMessage(`Attempting to terminate spot ${spotName}`);
                         const rmClient = new ResourceManagementClient(azureSub.session.credentials, azureSub.subscription.subscriptionId!);
-                        rmClient.resources.deleteMethod('debekoe-spot', "Microsoft.ContainerInstance", "",
+                        const resourceGroupName = workspace.getConfiguration('spot').get<string>('azureResourceGroup');
+                        if (!resourceGroupName) {
+                            const moreInfoItem: MessageItem = {title: 'More Info'};
+                            window.showErrorMessage('Please set up the resource group in the configuration.', moreInfoItem)
+                            .then((msgItem: MessageItem | undefined) => {
+                                if (msgItem === moreInfoItem) {
+                                    opn('https://github.com/derekbekoe/vscode-spot#configuration');
+                                }
+                            });
+                            return;
+                        }
+                        rmClient.resources.deleteMethod(resourceGroupName, "Microsoft.ContainerInstance", "",
                                                         "containerGroups", spotName, "2018-04-01")
                         .then(() => {
                             knownSpots.remove(spotName);
