@@ -100,10 +100,9 @@ Looking to contribute or debug yourself?
 4. Start the VS Code debugger to launch the extension
 
 ### Packaging
-`npm run compile`
-
-`./node_modules/.bin/vsce package`
-
+Compile TS: `npm run compile`  
+Build package: `./node_modules/.bin/vsce package`  
+Publish extension: `./node_modules/.bin/vsce publish -p TOKEN`  
 
 ## Release History
 

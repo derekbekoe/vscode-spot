@@ -1,8 +1,12 @@
 {
-    "name": "vscode-spot",
+    "name": "Spot",
     "description": "Instant cloud environments for developers.",
-    "version": "0.1.3",
+    "version": "0.1.5",
     "publisher": "derek-bekoe",
+    "galleryBanner": {
+        "color": "#3f51b5",
+        "theme": "dark"
+    },
     "repository": {
         "url": "https://github.com/derekbekoe/vscode-spot.git"
     },
@@ -15,6 +19,13 @@
     },
     "categories": [
         "Other"
+    ],
+    "keywords": [
+        "developer",
+        "environment",
+        "cloud",
+        "azure",
+        "container"
     ],
     "activationEvents": [
         "onView:spotExplorer",
