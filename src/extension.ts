@@ -1,4 +1,4 @@
-import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem, workspace, Memento } from 'vscode';
+import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem, workspace } from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as path from 'path';
 import * as requestretry from 'requestretry';

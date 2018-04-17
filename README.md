@@ -48,6 +48,8 @@ Set up an Azure File Share with the following files at the root of the file shar
 | `spot.azureFileShareName2`  | (optional) The file share name you want to mount for persistent storage.
 | `spot.createSpotWithSSLEnabled`  | (optional) Create new spots with SSL enabled. Disable this if you are having issues with Let's Encrypt.
 
+See [User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) on how to set these configuration values in VS Code.
+
 #### Log in to Azure
 
 If not already logged in, log in to Azure inside VS Code with `Azure: Log In`.
@@ -62,6 +64,10 @@ When done, `Spot: Disconnect` and then `Spot: Terminate` to shut down the instan
 :exclamation: Spot utilizes [Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/). See [Container Instances pricing](https://azure.microsoft.com/en-us/pricing/details/container-instances/) for their pricing information.
 
 :warning: When you're done with a spot, save any files in persistent storage and **terminate** the spot.
+
+#### Ports
+
+Inside a running spot, the following ports are available to you: 5001, 5002, 5003.
 
 
 ## Feedback
@@ -93,7 +99,10 @@ Looking to contribute or debug yourself?
 3. Run `npm install`
 4. Start the VS Code debugger to launch the extension
 
-Build the extension with `./node_modules/.bin/vsce package`.
+### Packaging
+`npm run compile`
+
+`./node_modules/.bin/vsce package`
 
 
 ## Release History
