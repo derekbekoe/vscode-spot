@@ -151,7 +151,7 @@ function cmdSpotCreate() {
                 deploymentTemplate.variables.azureStorageAccountKey1 = azureStorageAccountKey;
                 deploymentTemplate.variables.azureStorageAccountName2 = azureStorageAccountName;
                 deploymentTemplate.variables.azureStorageAccountKey2 = azureStorageAccountKey;
-                deploymentTemplate.variables.fileWatcherWatchPath = workspace.getConfiguration('spot').get('fileWatcherWatchPath', '/root');
+                deploymentTemplate.variables.fileWatcherWatchPath = workspace.getConfiguration('spot').get('fileWatcherWatchPath') || '/root';
 
                 const useSSL = workspace.getConfiguration('spot').get('createSpotWithSSLEnabled', false);
                 if (useSSL) {
