@@ -18,7 +18,8 @@ export var deploymentTemplate = {
       "azureStorageAccountKey1": "",
       "azureFileShareName2": "",
       "azureStorageAccountName2": "",
-      "azureStorageAccountKey2": ""
+      "azureStorageAccountKey2": "",
+      "fileWatcherWatchPath": ""
     },
     "resources": [
       {
@@ -86,6 +87,10 @@ export var deploymentTemplate = {
                   {
                     "name": "C_DOMAIN",
                     "value": "[concat(variables('spotName'), '.', variables('location'), '.azurecontainer.io')]"
+                  },
+                  {
+                    "name": "SPOT_FILE_WATCH_PATH",
+                    "value": "[variables('fileWatcherWatchPath')]"
                   }
                 ],
                 "volumeMounts": [

@@ -2,7 +2,7 @@
 
 [![Travis](https://travis-ci.com/derekbekoe/vscode-spot.svg?token=ng6izydYD2zkXPDRE5DP&branch=dev)](https://travis-ci.com/derekbekoe/vscode-spot)
 
-Developer tools are becoming more cloud powered. Scaling beyond what the user’s machine can provide is an awesome opportunity to do amazing things. Spot is a VS Code extension that provides an integrated terminal, file explorer and editor to any container image with terminal access through the browser also.
+Developer tools are becoming more cloud powered. Spot is a VS Code extension that provides an integrated terminal, file explorer and editor to any host running [the Spot Host](https://github.com/derekbekoe/spot) with terminal access through the browser also.
 
 - VS Code Extension
     - Terminal, File Explorer, File Editing, Notifications, Status Bar
@@ -28,7 +28,7 @@ Developer tools are becoming more cloud powered. Scaling beyond what the user’
 
 ## Quickstart
 
-A few steps to get you started right away.
+A few steps to get you started right away:
 
 #### Azure File Share
 
@@ -105,9 +105,7 @@ Build package: `./node_modules/.bin/vsce package`
 Publish extension: `./node_modules/.bin/vsce publish -p TOKEN`  
 
 ## Release History
-
 See [GitHub Releases](https://github.com/derekbekoe/vscode-spot/releases).
-
 
 ## License
 [MIT](LICENSE.md)

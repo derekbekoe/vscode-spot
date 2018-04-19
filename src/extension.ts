@@ -151,6 +151,7 @@ function cmdSpotCreate() {
                 deploymentTemplate.variables.azureStorageAccountKey1 = azureStorageAccountKey;
                 deploymentTemplate.variables.azureStorageAccountName2 = azureStorageAccountName;
                 deploymentTemplate.variables.azureStorageAccountKey2 = azureStorageAccountKey;
+                deploymentTemplate.variables.fileWatcherWatchPath = workspace.getConfiguration('spot').get('fileWatcherWatchPath', '/root');
 
                 const useSSL = workspace.getConfiguration('spot').get('createSpotWithSSLEnabled', false);
                 if (useSSL) {
@@ -327,7 +328,17 @@ function disconnectFromSpot(session: SpotSession | null) {
         spotFileTracker.disconnect();
         ipcQueue.push({ type: 'exit' });
         commands.executeCommand('setContext', 'canShowSpotExplorer', false);
-        window.showInformationMessage('Disconnected from spot.');
+        if (activeSession.hostname.indexOf('azurecontainer.io') > -1) {
+            const portalMsgItem: MessageItem = {title: 'Azure Portal'};
+            window.showInformationMessage('Disconnected from spot. Remember to review your currently running Azure spots to prevent unexpected charges.', portalMsgItem)
+            .then((msgItem: MessageItem | undefined) => {
+                if (portalMsgItem === msgItem) {
+                    opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
+                }
+            });
+        } else {
+            window.showInformationMessage('Disconnected from spot.');
+        }
     } else {
         window.showInformationMessage('Not currently connected to a spot.');
     }
