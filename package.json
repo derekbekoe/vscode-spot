@@ -1,14 +1,18 @@
 {
     "name": "Spot",
     "description": "Instant cloud environments for developers.",
-    "version": "0.1.7",
+    "version": "0.1.9",
     "publisher": "derek-bekoe",
     "galleryBanner": {
         "color": "#3f51b5",
         "theme": "dark"
     },
+    "icon": "images/icon.png",
     "repository": {
         "url": "https://github.com/derekbekoe/vscode-spot.git"
+    },
+    "bugs": {
+        "url": "https://github.com/derekbekoe/vscode-spot/issues"
     },
     "homepage": "https://github.com/derekbekoe/vscode-spot/blob/master/README.md",
     "license": "SEE LICENSE IN LICENSE.md",

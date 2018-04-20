@@ -1,3 +1,9 @@
+## [0.1.9]
+- Add different logo
+
+## [0.1.8]
+- Add logo
+
 ## [0.1.7]
 - Fix settings the file watch path.
 
