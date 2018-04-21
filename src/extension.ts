@@ -140,10 +140,12 @@ function cmdSpotCreate() {
                 const dateMin = date.getUTCMinutes();
                 const dateSec = date.getUTCSeconds();
                 const deploymentName: string = `spot-deployment-${dateDay}-${dateMonth}-${dateYr}-${dateHr}-${dateMin}-${dateSec}`;
+                const spotRegion: string = workspace.getConfiguration('spot').get('azureRegion') || 'westus';
                 deploymentTemplate.variables.spotName = `${spotName}`;
                 deploymentTemplate.variables.container1image = imageName;
                 deploymentTemplate.variables.instanceToken = instanceToken;
                 deploymentTemplate.variables.certbotEmail = azureSub.session.userId;
+                deploymentTemplate.variables.location = spotRegion;
 
                 deploymentTemplate.variables.azureFileShareName1 = azureFileShareName1;
                 deploymentTemplate.variables.azureFileShareName2 = azureFileShareName2 || azureFileShareName1;
@@ -179,7 +181,7 @@ function cmdSpotCreate() {
                         console.log('Deployment provisioningState', res.properties!.provisioningState);
                         console.log('Deployment correlationId', res.properties!.correlationId);
                         console.log('Deployment completed');
-                        const hostname = useSSL ? `https://${spotName}.westus.azurecontainer.io:443` : `http://${spotName}.westus.azurecontainer.io:80`;
+                        const hostname = useSSL ? `https://${spotName}.${spotRegion}.azurecontainer.io:443` : `http://${spotName}.${spotRegion}.azurecontainer.io:80`;
                         spotHealthCheck(hostname, instanceToken)
                         .then(() => {
                             knownSpots.add(spotName, hostname, instanceToken);

@@ -6,7 +6,7 @@ export var deploymentTemplate = {
       "spotName": "spotName",
       "container1image": "imageName",
       "instanceToken": "myToken",
-      "location": "westus",
+      "location": "",
       "useSSL": "1",
       "container1name": "client",
       "container1port": "443",
