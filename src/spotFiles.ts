@@ -23,30 +23,47 @@ export class SpotFileTracker {
 
   constructor(){}
 
+  private addFileOrDir(isDirectory: boolean, path: string, session: SpotSession) {
+    var new_node = new SpotFile(isDirectory, path, session);
+    const segments: string[] = path.split('/').slice(1);
+    var f_s = this.files;
+    for (let segment of segments) {
+      const segment_v = f_s.get(segment);
+      if (segment_v) {
+        f_s = segment_v.children;
+      } else {
+        f_s.set(segment, new_node);
+        f_s = new_node.children;
+      }
+    }
+  }
+
   public connect(session: SpotSession) {
     const url = new URL(session.hostname);
     const socketProtocol = url.protocol.startsWith('https') ? 'wss' : 'ws';
     const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/files/?token=${session.token}`;
+    var handledRootDir: boolean = false;
+    this.files = new Map<string, SpotFile>();
+    this.onFilesChangedEmitter.fire(this.files);
     this.ws = new WS(socketUri);
     this.ws.on('open', function () {
       console.log('socket open');
+      handledRootDir = false;
     });
   
     this.ws.on('message', (data: string) => {
       console.log('socket data', data);
       const obj_data = JSON.parse(data);
-      if (obj_data.event === 'addDir' || obj_data.event === 'add') {
-        var new_node = new SpotFile(obj_data.event === 'addDir', obj_data.path, session);
-        const segments: string[] = obj_data.path.split('/').slice(1);
-        var f_s = this.files;
-        for (let segment of segments) {
-          const segment_v = f_s.get(segment);
-          if (segment_v) {
-            f_s = segment_v.children;
-          } else {
-            f_s.set(segment, new_node);
-            f_s = new_node.children;
+      if (obj_data.event === 'addDir'  || obj_data.event === 'add') {
+        if (obj_data.event === 'addDir' && !handledRootDir) {
+          handledRootDir = true;
+          var segments: string[] = obj_data.path.split('/');
+          for (var i=1; i<=segments.length; i++) {
+            var s: string = segments.slice(0, i).join('/');
+            this.addFileOrDir(true, s, session);
           }
+        } else {
+          this.addFileOrDir(obj_data.event === 'addDir', obj_data.path, session);
         }
       } else if (obj_data.event === 'unlinkDir' || obj_data.event === 'unlink') {
         const segments: string[] = obj_data.path.split('/').slice(1);
