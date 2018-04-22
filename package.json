@@ -1,7 +1,7 @@
 {
     "name": "Spot",
     "description": "Instant cloud environments for developers.",
-    "version": "0.1.10",
+    "version": "0.1.13",
     "publisher": "derek-bekoe",
     "galleryBanner": {
         "color": "#3f51b5",
@@ -149,7 +149,7 @@
         "rimraf": "^2.6.2",
         "tmp": "0.0.33",
         "vsce": "^1.37.6",
-        "vscode-extension-telemetry": "^0.0.15",
+        "applicationinsights": "1.0.1",
         "ws": "^5.0.0"
     }
 }

@@ -16,6 +16,8 @@ Developer tools are becoming more cloud powered. Spot is a VS Code extension tha
 ![Access spot from browser](doc/assets/spot_screenshot3.png "Access spot from browser")
 
 
+**NOTE: The VS Code Extension only supports Linux/macOS, Currently, the extension will not run correctly on Windows.**
+
 ## Commands
 
 | Command | Description |

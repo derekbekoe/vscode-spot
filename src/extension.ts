@@ -1,5 +1,5 @@
 import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem, workspace } from 'vscode';
-import TelemetryReporter from 'vscode-extension-telemetry';
+import TelemetryReporter from './telemetry';
 import * as path from 'path';
 import * as requestretry from 'requestretry';
 import opn = require('opn');
