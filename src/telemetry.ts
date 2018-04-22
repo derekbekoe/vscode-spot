@@ -35,9 +35,9 @@ export default class TelemetryReporter extends vscode.Disposable {
            this.appInsightsClient = appInsights.defaultClient;
         }
         if (vscode && vscode.env) {
-            this.appInsightsClient.context.keys.userId = vscode.env.machineId;
-            this.appInsightsClient.context.keys.sessionId = vscode.env.sessionId;
-            this.appInsightsClient.context.keys.applicationVersion = this.extensionVersion;
+            this.appInsightsClient.context.tags[this.appInsightsClient.context.keys.userId] = vscode.env.machineId;
+            this.appInsightsClient.context.tags[this.appInsightsClient.context.keys.sessionId] = vscode.env.sessionId;
+            this.appInsightsClient.context.tags[this.appInsightsClient.context.keys.applicationVersion] = this.extensionVersion;
         }
         this.appInsightsClient.commonProperties = this.getCommonProperties();
         this.updateUserOptIn();

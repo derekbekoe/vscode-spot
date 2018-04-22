@@ -1,3 +1,6 @@
+## [0.1.14]
+- Minor fix
+
 ## [0.1.13]
 - Custom Azure region for Spot deployments and support multi-level root directories in tree view.
 
