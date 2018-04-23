@@ -6,7 +6,7 @@ import * as appInsights from 'applicationinsights';
 
 process.env['APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL'] = '1';
 
-export default class TelemetryReporter extends vscode.Disposable {
+export class TelemetryReporter extends vscode.Disposable {
     private appInsightsClient: appInsights.TelemetryClient | undefined;
     private userOptIn: boolean = true;
     private toDispose: vscode.Disposable[] = [];
@@ -96,4 +96,10 @@ export function createTelemetryReporter(context: vscode.ExtensionContext) {
     const reporter = new TelemetryReporter(extensionPackage.name, extensionPackage.version, extensionPackage.aiKey);
     context.subscriptions.push(reporter);
     return reporter;
+}
+
+export enum TelemetryResult {
+    SUCCESS = "SUCCESS",
+    ERROR = "ERROR",
+    USER_RECOVERABLE = "USER_RECOVERABLE"
 }

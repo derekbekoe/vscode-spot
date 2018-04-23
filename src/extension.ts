@@ -1,5 +1,5 @@
 import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem, workspace } from 'vscode';
-import TelemetryReporter from './telemetry';
+import { TelemetryReporter, TelemetryResult } from './telemetry';
 import * as path from 'path';
 import * as requestretry from 'requestretry';
 import opn = require('opn');
@@ -100,8 +100,12 @@ function spotHealthCheck(hostname: string, instanceToken: string): Promise<any> 
 
 function cmdSpotCreate() {
     reporter.sendTelemetryEvent('onCommand/spotCreate');
+    reporter.sendTelemetryEvent('spotCreate/initiate');
     const azureSub = getAzureSubscription();
     if (!azureSub) {
+        reporter.sendTelemetryEvent('spotCreate/conclude',
+                                    {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                                    'spot.reason': 'NO_AZURE_SUBSCRIPTION'});
         return;
     }
     const resourceGroupName = workspace.getConfiguration('spot').get<string>('azureResourceGroup');
@@ -118,6 +122,9 @@ function cmdSpotCreate() {
                 opn('https://github.com/derekbekoe/vscode-spot#configuration');
             }
         });
+        reporter.sendTelemetryEvent('spotCreate/conclude',
+                                    {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                                    'spot.reason': 'MISSING_CONFIGURATION_VARIABLES'});
         return;
     }
     window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true, validateInput: (val) => {
@@ -184,6 +191,11 @@ function cmdSpotCreate() {
                         const hostname = useSSL ? `https://${spotName}.${spotRegion}.azurecontainer.io:443` : `http://${spotName}.${spotRegion}.azurecontainer.io:80`;
                         spotHealthCheck(hostname, instanceToken)
                         .then(() => {
+                            reporter.sendTelemetryEvent('spotCreate/conclude',
+                                                        {'spot.result': TelemetryResult.SUCCESS,
+                                                         'spot.detail.useSSL': String(useSSL),
+                                                         'spot.detail.imageName': imageName,
+                                                         'spot.detail.spotRegion': spotRegion});
                             knownSpots.add(spotName, hostname, instanceToken);
                             const connectItem: MessageItem = {title: 'Connect'};
                             window.showInformationMessage('Spot created successfully', connectItem)
@@ -195,11 +207,23 @@ function cmdSpotCreate() {
                         })
                         .catch((err) => {
                             console.error('Spot health check failed', err);
+                            reporter.sendTelemetryEvent('spotCreate/conclude',
+                                                        {'spot.result': TelemetryResult.ERROR,
+                                                         'spot.reason': 'HEALTH_CHECK_FAILURE',
+                                                         'spot.detail.useSSL': String(useSSL),
+                                                         'spot.detail.imageName': imageName,
+                                                         'spot.detail.spotRegion': spotRegion});
                         });
                     })
                     .catch((reason: any) => {
                         console.error('Deployment failed', reason);
                         window.showErrorMessage(`Unable to create spot: ${reason}`);
+                        reporter.sendTelemetryEvent('spotCreate/conclude',
+                                                        {'spot.result': TelemetryResult.ERROR,
+                                                         'spot.reason': 'DEPLOYMENT_FAILURE',
+                                                         'spot.detail.useSSL': String(useSSL),
+                                                         'spot.detail.imageName': imageName,
+                                                         'spot.detail.spotRegion': spotRegion});
                     });
             });
         });
@@ -257,6 +281,7 @@ async function createSpotConsole(session: SpotSession): Promise<void> {
 }
 
 function connectToSpot(hostname: string, token: string): Promise<null> {
+    reporter.sendTelemetryEvent('spotConnect/initiate');
     return new Promise((resolve, reject) => {
         spotHealthCheck(hostname, token)
         .then(() => {
@@ -266,11 +291,17 @@ function connectToSpot(hostname: string, token: string): Promise<null> {
                 commands.executeCommand('setContext', 'canShowSpotExplorer', true);
                 window.showInformationMessage(`Connected to ${hostname}`);
                 updateStatusBar(`${hostname} (connected)`);
+                reporter.sendTelemetryEvent('spotConnect/conclude',
+                                            {'spot.result': TelemetryResult.SUCCESS});
                 resolve();
             }).catch(() => {
                 activeSession = null;
                 commands.executeCommand('setContext', 'canShowSpotExplorer', false);
                 console.error('An error occurred whilst creating spot console.');
+                reporter.sendTelemetryEvent('spotConnect/conclude',
+                                            {'spot.result': TelemetryResult.ERROR,
+                                            'spot.reason': 'CONSOLE_LAUNCH_FAILURE'});
+                reject();
             });
         })
         .catch((err) => {
@@ -279,6 +310,9 @@ function connectToSpot(hostname: string, token: string): Promise<null> {
             window.showErrorMessage(`Failed to connect to ${hostname}`);
             updateStatusBar('Not connected');
             statusBarItem.show();
+            reporter.sendTelemetryEvent('spotConnect/conclude',
+                                            {'spot.result': TelemetryResult.ERROR,
+                                            'spot.reason': 'HEALTH_CHECK_FAILURE'});
             reject();
         });
     });
@@ -319,11 +353,15 @@ function cmdSpotDisconnect() {
 }
 
 function disconnectFromSpot(session: SpotSession | null) {
+    reporter.sendTelemetryEvent('spotDisconnect/initiate');
     if (activeSession != null) {
         // Check if there are any unsaved files from the spot
         for (var te of window.visibleTextEditors) {
             if (te.document.isDirty && te.document.fileName.indexOf('_spot') > -1) {
                 window.showWarningMessage('Please save unsaved files in spot.');
+                reporter.sendTelemetryEvent('spotDisconnect/conclude',
+                                            {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                                            'spot.reason': 'UNSAVED_FILES'});
                 return;
             }
         }
@@ -346,6 +384,7 @@ function disconnectFromSpot(session: SpotSession | null) {
     }
     activeSession = null;
     updateStatusBar('Not connected');
+    reporter.sendTelemetryEvent('spotDisconnect/conclude', {'spot.result': TelemetryResult.SUCCESS});
 }
 
 function cmdSpotTerminate() {
@@ -364,8 +403,12 @@ function cmdSpotTerminate() {
 }
 
 function terminateSpot() {
+    reporter.sendTelemetryEvent('spotTerminate/initiate');
     const azureSub = getAzureSubscription();
     if (!azureSub) {
+        reporter.sendTelemetryEvent('spotTerminate/conclude',
+                                    {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                                     'spot.reason': 'NO_AZURE_SUBSCRIPTION'});
         return;
     }
     const spotNamePrompt = Object.keys(knownSpots.getAll()).length > 0 ? `Known spots: ${Array.from(Object.keys(knownSpots.getAll()))}` : undefined;
@@ -388,6 +431,9 @@ function terminateSpot() {
                                     opn('https://github.com/derekbekoe/vscode-spot#configuration');
                                 }
                             });
+                            reporter.sendTelemetryEvent('spotTerminate/conclude',
+                                    {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                                    'spot.reason': 'MISSING_CONFIGURATION_VARIABLES'});
                             return;
                         }
                         rmClient.resources.deleteMethod(resourceGroupName, "Microsoft.ContainerInstance", "",
@@ -396,9 +442,14 @@ function terminateSpot() {
                             knownSpots.remove(spotName);
                             console.log('Spot deleted');
                             window.showInformationMessage('Spot terminated!');
+                            reporter.sendTelemetryEvent('spotTerminate/conclude',
+                                                        {'spot.result': TelemetryResult.SUCCESS});
                         })
                         .catch(() => {
                             const portalMsgItem: MessageItem = {title: 'Azure Portal'};
+                            reporter.sendTelemetryEvent('spotTerminate/conclude',
+                                    {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                                     'spot.reason': 'ARM_RESOURCE_DELETE_FAILURE'});
                             window.showErrorMessage('Unable to terminate spot. Open the Azure portal and delete the container group from there.', portalMsgItem)
                             .then((msgItem: MessageItem | undefined) => {
                                 if (portalMsgItem === msgItem) {
@@ -408,6 +459,9 @@ function terminateSpot() {
                         });
                     } else {
                         console.log('User cancelled spot delete operation.');
+                        reporter.sendTelemetryEvent('spotTerminate/conclude',
+                                    {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                                    'spot.reason': 'USER_CANCELLED'});
                     }
                 });
         }
