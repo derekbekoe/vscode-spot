@@ -47,7 +47,7 @@ Set up an Azure File Share with the following files at the root of the file shar
 | `spot.azureStorageAccountName`    | The storage account name containing the file share.
 | `spot.azureStorageAccountKey` | The storage account key for the storage account.
 | `spot.azureFileShareName1`  | The file share name containing the spot host.
-| `spot.azureRegion` | The region to deploy spots into. See [region availability](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-quotas#region-availability).
+| `spot.azureRegion` | (optional) The region to deploy spots into. See [region availability](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-quotas#region-availability).
 | `spot.azureFileShareName2`  | (optional) The file share name you want to mount for persistent storage.
 | `spot.createSpotWithSSLEnabled`  | (optional) Create new spots with SSL enabled. Disable this if you are having issues with Let's Encrypt.
 
@@ -56,7 +56,8 @@ See [User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/
 #### Log in to Azure
 
 If not already logged in, log in to Azure inside VS Code with `Azure: Log In`.
-Use `Azure: Select Subscriptions` to select an appropriate subscription.
+
+Use `Azure: Select Subscriptions` to select an appropriate subscription (the same one that has the resource group from `spot.azureResourceGroup`).
 
 #### Create a Spot
 
