@@ -370,10 +370,13 @@ function disconnectFromSpot(session: SpotSession | null) {
         commands.executeCommand('setContext', 'canShowSpotExplorer', false);
         if (activeSession.hostname.indexOf('azurecontainer.io') > -1) {
             const portalMsgItem: MessageItem = {title: 'Azure Portal'};
-            window.showInformationMessage('Disconnected from spot. Remember to review your currently running Azure spots to prevent unexpected charges.', portalMsgItem)
+            const terminateMsgItem: MessageItem = {title: 'Terminate'};
+            window.showInformationMessage('Disconnected from spot. Remember to review your currently running Azure spots to prevent unexpected charges.', portalMsgItem, terminateMsgItem)
             .then((msgItem: MessageItem | undefined) => {
                 if (portalMsgItem === msgItem) {
                     opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
+                } else if (terminateMsgItem === msgItem) {
+                    terminateSpot();
                 }
             });
         } else {
@@ -412,7 +415,7 @@ function terminateSpot() {
         return;
     }
     const spotNamePrompt = Object.keys(knownSpots.getAll()).length > 0 ? `Known spots: ${Array.from(Object.keys(knownSpots.getAll()))}` : undefined;
-    window.showInputBox({placeHolder: 'Name of spot.', ignoreFocusOut: true, prompt: spotNamePrompt}).then((spotName) => {
+    window.showInputBox({placeHolder: 'Name of spot to terminate/delete.', ignoreFocusOut: true, prompt: spotNamePrompt}).then((spotName) => {
         if (spotName) {
             const confirmYesMsgItem = {title: 'Yes'};
             const confirmNoMsgItem = {title: 'No'};
