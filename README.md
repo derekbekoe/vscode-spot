@@ -35,9 +35,9 @@ A few steps to get you started right away:
 #### Azure File Share
 
 Set up an Azure File Share with the following files at the root of the file share:  
-    - https://vscodespot.blob.core.windows.net/preview/spot-host  
-    - https://vscodespot.blob.core.windows.net/preview/pty.node  
-    - https://vscodespot.blob.core.windows.net/preview/certbot.sh  
+    - https://github.com/derekbekoe/spot/releases/download/v0.2.0/spot-host  
+    - https://github.com/derekbekoe/spot/releases/download/v0.2.0/pty.node  
+    - https://github.com/derekbekoe/spot/releases/download/v0.2.0/certbot.sh  
 
 #### Configuration
 
