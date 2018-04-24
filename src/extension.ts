@@ -2,6 +2,8 @@ import { window, Extension, ExtensionContext, extensions, commands, StatusBarAli
 import { TelemetryReporter, TelemetryResult } from './telemetry';
 import * as path from 'path';
 import * as requestretry from 'requestretry';
+import * as cp from 'child_process';
+import * as semver from 'semver';
 import opn = require('opn');
 import { URL } from 'url';
 import { AzureAccount, AzureSubscription } from './azure-account.api';
@@ -232,16 +234,52 @@ function cmdSpotCreate() {
 
 const ipcQueue = new Queue<any>();
 
+// Adapted from https://github.com/Microsoft/vscode-azure-account
+async function exec(command: string) {
+	return new Promise<{error: Error | null, stdout: string, stderr: string}>((resolve, reject) => {
+		cp.exec(command, (error, stdout, stderr) => {
+			(error || stderr ? reject : resolve)({ error, stdout, stderr });
+		});
+	});
+}
+
+async function noNodeWarning() {
+	const open: MessageItem = { title: "Download Node.js" };
+	const message = "Opening a Spot currently requires Node.js 6 or later to be installed (https://nodejs.org) on Windows.";
+	const response = await window.showInformationMessage(message, open);
+	if (response === open) {
+		opn('https://nodejs.org');
+	}
+}
+
 async function createSpotConsole(session: SpotSession): Promise<void> {
+    const isWindows = process.platform === 'win32';
+    if (isWindows) {
+        try {
+            const { stdout } = await exec('node.exe --version');
+            const version = stdout[0] === 'v' && stdout.substr(1).trim();
+            if (version && semver.valid(version) && !semver.gte(version, '6.0.0')) {
+                return noNodeWarning();
+            }
+        } catch (err) {
+            return noNodeWarning();
+        }
+    }
     const hostname = session.hostname;
     const token = session.token;
-    let shellPath = path.join(__dirname, '../../console_bin/node.sh');
+    let shellPath = isWindows ? 'node.exe' : path.join(__dirname, '../../console_bin/node.sh');
     let modulePath = path.join(__dirname, 'consoleLauncher');
+    if (isWindows) {
+        modulePath = modulePath.replace(/\\/g, '\\\\');
+    }
     const shellArgs = [
         process.argv0,
         '-e',
         `require('${modulePath}').main()`
     ]
+    if (isWindows) {
+        shellArgs.shift();
+    }
     // ipc
     const ipc = await createServer('vscode-spot-console', async (req, res) => {
         let dequeue = false;

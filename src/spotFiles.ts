@@ -138,6 +138,13 @@ export function openFileEditor(documentPath: any, session: SpotSession) {
         workspace.onWillSaveTextDocument((e: TextDocumentWillSaveEvent) => {
             if (e.document.fileName === tmpPath && e.reason === TextDocumentSaveReason.Manual) {
               ws.send(e.document.getText());
+            } else if (process.platform === 'win32') {
+              // Capitalize the drive letter to match tmp path and try again.
+              let docFileName = e.document.fileName;
+              docFileName = docFileName.charAt(0).toUpperCase() + docFileName.slice(1);
+              if (docFileName === tmpPath && e.reason === TextDocumentSaveReason.Manual) {
+                ws.send(e.document.getText());
+              }
             }
         });
       }
