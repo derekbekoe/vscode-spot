@@ -235,36 +235,8 @@ function cmdSpotCreate() {
 const ipcQueue = new Queue<any>();
 
 // Adapted from https://github.com/Microsoft/vscode-azure-account
-async function exec(command: string) {
-	return new Promise<{error: Error | null, stdout: string, stderr: string}>((resolve, reject) => {
-		cp.exec(command, (error, stdout, stderr) => {
-			(error || stderr ? reject : resolve)({ error, stdout, stderr });
-		});
-	});
-}
-
-async function noNodeWarning() {
-	const open: MessageItem = { title: "Download Node.js" };
-	const message = "Opening a Spot currently requires Node.js 6 or later to be installed (https://nodejs.org) on Windows.";
-	const response = await window.showInformationMessage(message, open);
-	if (response === open) {
-		opn('https://nodejs.org');
-	}
-}
-
 async function createSpotConsole(session: SpotSession): Promise<void> {
     const isWindows = process.platform === 'win32';
-    if (isWindows) {
-        try {
-            const { stdout } = await exec('node.exe --version');
-            const version = stdout[0] === 'v' && stdout.substr(1).trim();
-            if (version && semver.valid(version) && !semver.gte(version, '6.0.0')) {
-                return noNodeWarning();
-            }
-        } catch (err) {
-            return noNodeWarning();
-        }
-    }
     const hostname = session.hostname;
     const token = session.token;
     let shellPath = isWindows ? 'node.exe' : path.join(__dirname, '../../console_bin/node.sh');
@@ -321,6 +293,30 @@ async function createSpotConsole(session: SpotSession): Promise<void> {
 function connectToSpot(hostname: string, token: string): Promise<null> {
     reporter.sendTelemetryEvent('spotConnect/initiate');
     return new Promise((resolve, reject) => {
+        const isWindows = process.platform === 'win32';
+        if (isWindows) {
+            try {
+                let stdout = cp.execSync('node.exe --version').toString();
+                const version = stdout[0] === 'v' && stdout.substr(1).trim();
+                if (version && semver.valid(version) && !semver.gte(version, '6.0.0')) {
+                    throw new Error('Bad node version');
+                }
+            } catch (err) {
+                console.log(err);
+                const open: MessageItem = { title: "Download Node.js" };
+                const message = "Opening a Spot currently requires Node.js 6 or later to be installed (https://nodejs.org) on Windows.";
+                window.showInformationMessage(message, open)
+                .then((msgItem: MessageItem | undefined) => {
+                    if (msgItem === open) {
+                        opn('https://nodejs.org');
+                    }
+                });
+                reporter.sendTelemetryEvent('spotConnect/conclude',
+                                            {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                                            'spot.reason': 'WINDOWS_REQUIRE_NODE'});
+                return;
+            }
+        }
         spotHealthCheck(hostname, token)
         .then(() => {
             activeSession = new SpotSession(hostname, token);
