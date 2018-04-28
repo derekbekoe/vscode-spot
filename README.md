@@ -1,7 +1,5 @@
 # Spot: Instant cloud environments for developers
 
-[![Travis](https://travis-ci.com/derekbekoe/vscode-spot.svg?token=ng6izydYD2zkXPDRE5DP&branch=dev)](https://travis-ci.com/derekbekoe/vscode-spot)
-
 Developer tools are becoming more cloud powered. Spot is a VS Code extension that provides an integrated terminal, file explorer and editor to any host running [the Spot Host](https://github.com/derekbekoe/spot) with terminal access through the browser also.
 
 - VS Code Extension
@@ -47,7 +45,7 @@ Set up an Azure File Share with the following files at the root of the file shar
 | `spot.azureFileShareName1`  | The file share name containing the spot host.
 | `spot.azureRegion` | (optional) The region to deploy spots into. See [region availability](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-quotas#region-availability).
 | `spot.azureFileShareName2`  | (optional) The file share name you want to mount for persistent storage.
-| `spot.createSpotWithSSLEnabled`  | (optional) Create new spots with SSL enabled. Disable this if you are having issues with Let's Encrypt.
+| `spot.createSpotWithSSLEnabled`  | (optional) Create new spots with SSL enabled. This is experimental. Disable this if you are having issues with Let's Encrypt.
 
 See [User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) on how to set these configuration values in VS Code.
 

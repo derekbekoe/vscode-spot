@@ -14,7 +14,7 @@ import { createServer, readJSON, Queue, randomBytes } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { SpotFileTracker, openFileEditor } from './spotFiles';
 import { SpotSession } from './session';
-import { deploymentTemplate } from './spotDeploy';
+import { deploymentTemplate, certbotContainer, userContainer } from './spotDeploy';
 import { KnownSpots } from './spotUtil';
 
 let reporter: TelemetryReporter;
@@ -169,10 +169,12 @@ function cmdSpotCreate() {
                     console.log('Spot will be created with SSL enabled.');
                     deploymentTemplate.variables.useSSL = '1';
                     deploymentTemplate.variables.container1port = '443';
+                    deploymentTemplate.resources[0].properties.containers = [userContainer, certbotContainer];
                 } else {
                     console.log('Spot will be created with SSL disabled.');
                     deploymentTemplate.variables.useSSL = '0';
                     deploymentTemplate.variables.container1port = '80';
+                    deploymentTemplate.resources[0].properties.containers = [userContainer];
                 }
 
                 const deploymentOptions: ResourceModels.Deployment = {
@@ -190,6 +192,7 @@ function cmdSpotCreate() {
                         console.log('Deployment provisioningState', res.properties!.provisioningState);
                         console.log('Deployment correlationId', res.properties!.correlationId);
                         console.log('Deployment completed');
+                        window.showInformationMessage(`Deployment completed. Running health check for ${spotName}`);
                         const hostname = useSSL ? `https://${spotName}.${spotRegion}.azurecontainer.io:443` : `http://${spotName}.${spotRegion}.azurecontainer.io:80`;
                         spotHealthCheck(hostname, instanceToken)
                         .then(() => {
@@ -215,6 +218,13 @@ function cmdSpotCreate() {
                                                          'spot.detail.useSSL': String(useSSL),
                                                          'spot.detail.imageName': imageName,
                                                          'spot.detail.spotRegion': spotRegion});
+                            const portalMsgItem: MessageItem = {title: 'Azure Portal'};
+                            window.showErrorMessage(`Spot health check failed for ${spotName}: Check the container logs in the Portal.`, portalMsgItem)
+                            .then((msgItem: MessageItem | undefined) => {
+                                if (portalMsgItem === msgItem) {
+                                    opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
+                                }
+                            });
                         });
                     })
                     .catch((reason: any) => {
@@ -476,11 +486,11 @@ function terminateSpot() {
                         rmClient.resources.deleteMethod(resourceGroupName, "Microsoft.ContainerInstance", "",
                                                         "containerGroups", spotName, "2018-04-01")
                         .then(() => {
-                            knownSpots.remove(spotName);
                             console.log('Spot deleted');
                             window.showInformationMessage('Spot terminated!');
                             reporter.sendTelemetryEvent('spotTerminate/conclude',
-                                                        {'spot.result': TelemetryResult.SUCCESS});
+                            {'spot.result': TelemetryResult.SUCCESS});
+                            knownSpots.remove(spotName);
                         })
                         .catch(() => {
                             const portalMsgItem: MessageItem = {title: 'Azure Portal'};

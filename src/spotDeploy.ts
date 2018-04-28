@@ -10,7 +10,7 @@ export var deploymentTemplate = {
       "useSSL": "1",
       "container1name": "client",
       "container1port": "443",
-      "container2image": "certbot/certbot",
+      "container2image": "certbot/certbot:v0.23.0",
       "container2name": "certbot",
       "certbotEmail": "vscodespot@derekbekoe.com",
       "azureFileShareName1": "",
@@ -31,135 +31,7 @@ export var deploymentTemplate = {
             "isSpot": "true"
         },
         "properties": {
-          "containers": [
-            {
-              "name": "[variables('container1name')]",
-              "properties": {
-                "image": "[variables('container1image')]",
-                "command": [
-                  "/bin/sh", "-c", "/.spot/spot-host"
-                ],
-                "resources": {
-                  "requests": {
-                    "cpu": 1,
-                    "memoryInGb": 1.5
-                  }
-                },
-                "ports": [
-                  {
-                    "protocol": "TCP",
-                    "port": 80
-                  },
-                  {
-                    "protocol": "TCP",
-                    "port": 443
-                  },
-                  {
-                    "protocol": "TCP",
-                    "port": 5001
-                  },
-                  {
-                    "protocol": "TCP",
-                    "port": 5002
-                  },
-                  {
-                    "protocol": "TCP",
-                    "port": 5003
-                  }
-                ],
-                "environmentVariables": [
-                  {
-                    "name": "PORT",
-                    "value": "[variables('container1port')]"
-                  },
-                  {
-                    "name": "DEBUG",
-                    "value": "http,mail,express:*"
-                  },
-                  {
-                    "name": "USE_SSL",
-                    "value": "[variables('useSSL')]"
-                  },
-                  {
-                    "name": "INSTANCE_TOKEN",
-                    "value": "[variables('instanceToken')]"
-                  },
-                  {
-                    "name": "C_DOMAIN",
-                    "value": "[concat(variables('spotName'), '.', variables('location'), '.azurecontainer.io')]"
-                  },
-                  {
-                    "name": "SPOT_FILE_WATCH_PATH",
-                    "value": "[variables('fileWatcherWatchPath')]"
-                  }
-                ],
-                "volumeMounts": [
-                  {
-                    "name": "spot-host-mount",
-                    "mountPath": "/.spot",
-                    "readOnly": true
-                  },
-                  {
-                    "name": "user-files",
-                    "mountPath": "/root/persistent",
-                    "readOnly": false
-                  },
-                  {
-                    "name": "certbot-dir",
-                    "mountPath": "/.certbot"
-                  },
-                  {
-                    "name": "letsencrypt-dir",
-                    "mountPath": "/etc/letsencrypt"
-                  }
-                ]
-              }
-            },
-            {
-              "name": "[variables('container2name')]",
-              "properties": {
-                "image": "[variables('container2image')]",
-                "command": [
-                  "/bin/sh", "-c", "/.spot/certbot.sh"
-                ],
-                "resources": {
-                  "requests": {
-                    "cpu": 1,
-                    "memoryInGb": 1.5
-                  }
-                },
-                "environmentVariables": [
-                  {
-                    "name": "USE_SSL",
-                    "value": "[variables('useSSL')]"
-                  },
-                  {
-                    "name": "C_DOMAIN",
-                    "value": "[concat(variables('spotName'), '.', variables('location'), '.azurecontainer.io')]"
-                  },
-                  {
-                    "name": "C_EMAIL",
-                    "value": "[variables('certbotEmail')]"
-                  }
-                ],
-                "volumeMounts": [
-                  {
-                    "name": "spot-host-mount",
-                    "mountPath": "/.spot",
-                    "readOnly": true
-                  },
-                  {
-                    "name": "certbot-dir",
-                    "mountPath": "/.certbot"
-                  },
-                  {
-                    "name": "letsencrypt-dir",
-                    "mountPath": "/etc/letsencrypt"
-                  }
-                ]
-              }
-            }
-          ],
+          "containers": [Object()],
           "osType": "Linux",
           "restartPolicy": "Never",
           "ipAddress": {
@@ -226,3 +98,133 @@ export var deploymentTemplate = {
       }
     }
   };
+
+export var userContainer = {
+  "name": "[variables('container1name')]",
+  "properties": {
+    "image": "[variables('container1image')]",
+    "command": [
+      "/bin/sh", "-c", "/.spot/spot-host"
+    ],
+    "resources": {
+      "requests": {
+        "cpu": 1,
+        "memoryInGb": 1.5
+      }
+    },
+    "ports": [
+      {
+        "protocol": "TCP",
+        "port": 80
+      },
+      {
+        "protocol": "TCP",
+        "port": 443
+      },
+      {
+        "protocol": "TCP",
+        "port": 5001
+      },
+      {
+        "protocol": "TCP",
+        "port": 5002
+      },
+      {
+        "protocol": "TCP",
+        "port": 5003
+      }
+    ],
+    "environmentVariables": [
+      {
+        "name": "PORT",
+        "value": "[variables('container1port')]"
+      },
+      {
+        "name": "DEBUG",
+        "value": "http,mail,express:*"
+      },
+      {
+        "name": "USE_SSL",
+        "value": "[variables('useSSL')]"
+      },
+      {
+        "name": "INSTANCE_TOKEN",
+        "value": "[variables('instanceToken')]"
+      },
+      {
+        "name": "C_DOMAIN",
+        "value": "[concat(variables('spotName'), '.', variables('location'), '.azurecontainer.io')]"
+      },
+      {
+        "name": "SPOT_FILE_WATCH_PATH",
+        "value": "[variables('fileWatcherWatchPath')]"
+      }
+    ],
+    "volumeMounts": [
+      {
+        "name": "spot-host-mount",
+        "mountPath": "/.spot",
+        "readOnly": true
+      },
+      {
+        "name": "user-files",
+        "mountPath": "/root/persistent",
+        "readOnly": false
+      },
+      {
+        "name": "certbot-dir",
+        "mountPath": "/.certbot"
+      },
+      {
+        "name": "letsencrypt-dir",
+        "mountPath": "/etc/letsencrypt"
+      }
+    ]
+  }
+}
+
+
+export var certbotContainer = {
+  "name": "[variables('container2name')]",
+  "properties": {
+    "image": "[variables('container2image')]",
+    "command": [
+      "/bin/sh", "-c", "/.spot/certbot.sh"
+    ],
+    "resources": {
+      "requests": {
+        "cpu": 1,
+        "memoryInGb": 1.5
+      }
+    },
+    "environmentVariables": [
+      {
+        "name": "USE_SSL",
+        "value": "[variables('useSSL')]"
+      },
+      {
+        "name": "C_DOMAIN",
+        "value": "[concat(variables('spotName'), '.', variables('location'), '.azurecontainer.io')]"
+      },
+      {
+        "name": "C_EMAIL",
+        "value": "[variables('certbotEmail')]"
+      }
+    ],
+    "volumeMounts": [
+      {
+        "name": "spot-host-mount",
+        "mountPath": "/.spot",
+        "readOnly": true
+      },
+      {
+        "name": "certbot-dir",
+        "mountPath": "/.certbot"
+      },
+      {
+        "name": "letsencrypt-dir",
+        "mountPath": "/etc/letsencrypt"
+      }
+    ]
+  }
+}
