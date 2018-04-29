@@ -183,60 +183,72 @@ function cmdSpotCreate() {
                         template: deploymentTemplate
                     }
                 };
-                console.log('Deployment template for spot creation', deploymentTemplate);
-                window.showInformationMessage(`Creating spot ${spotName}`);
-                const rmClient = new ResourceManagementClient(azureSub.session.credentials, azureSub.subscription.subscriptionId!);
-                rmClient.deployments.createOrUpdate(resourceGroupName,
-                    deploymentName, deploymentOptions)
-                    .then((res: ResourceModels.DeploymentExtended) => {
-                        console.log('Deployment provisioningState', res.properties!.provisioningState);
-                        console.log('Deployment correlationId', res.properties!.correlationId);
-                        console.log('Deployment completed');
-                        window.showInformationMessage(`Deployment completed. Running health check for ${spotName}`);
-                        const hostname = useSSL ? `https://${spotName}.${spotRegion}.azurecontainer.io:443` : `http://${spotName}.${spotRegion}.azurecontainer.io:80`;
-                        spotHealthCheck(hostname, instanceToken)
-                        .then(() => {
-                            reporter.sendTelemetryEvent('spotCreate/conclude',
-                                                        {'spot.result': TelemetryResult.SUCCESS,
-                                                         'spot.detail.useSSL': String(useSSL),
-                                                         'spot.detail.imageName': imageName,
-                                                         'spot.detail.spotRegion': spotRegion});
-                            knownSpots.add(spotName, hostname, instanceToken);
-                            const connectItem: MessageItem = {title: 'Connect'};
-                            window.showInformationMessage('Spot created successfully', connectItem)
-                            .then((msgItem: MessageItem | undefined) => {
-                                if (msgItem === connectItem) {
-                                    connectToSpot(hostname, instanceToken);
-                                }
+                const confirmYesMsgItem = {title: 'Yes'};
+                const confirmNoMsgItem = {title: 'No'};
+                window.showWarningMessage(`Are you sure you want to create the spot ${spotName}`, confirmYesMsgItem, confirmNoMsgItem)
+                .then((msgItem: MessageItem | undefined) => {
+                    if (msgItem === confirmYesMsgItem) {
+                        console.log('Deployment template for spot creation', deploymentTemplate);
+                        window.showInformationMessage(`Creating spot ${spotName}`);
+                        const rmClient = new ResourceManagementClient(azureSub.session.credentials, azureSub.subscription.subscriptionId!);
+                        rmClient.deployments.createOrUpdate(resourceGroupName,
+                            deploymentName, deploymentOptions)
+                            .then((res: ResourceModels.DeploymentExtended) => {
+                                console.log('Deployment provisioningState', res.properties!.provisioningState);
+                                console.log('Deployment correlationId', res.properties!.correlationId);
+                                console.log('Deployment completed');
+                                window.showInformationMessage(`Deployment completed. Running health check for ${spotName}`);
+                                const hostname = useSSL ? `https://${spotName}.${spotRegion}.azurecontainer.io:443` : `http://${spotName}.${spotRegion}.azurecontainer.io:80`;
+                                spotHealthCheck(hostname, instanceToken)
+                                .then(() => {
+                                    reporter.sendTelemetryEvent('spotCreate/conclude',
+                                                                {'spot.result': TelemetryResult.SUCCESS,
+                                                                 'spot.detail.useSSL': String(useSSL),
+                                                                 'spot.detail.imageName': imageName,
+                                                                 'spot.detail.spotRegion': spotRegion});
+                                    knownSpots.add(spotName, hostname, instanceToken);
+                                    const connectItem: MessageItem = {title: 'Connect'};
+                                    window.showInformationMessage('Spot created successfully', connectItem)
+                                    .then((msgItem: MessageItem | undefined) => {
+                                        if (msgItem === connectItem) {
+                                            connectToSpot(hostname, instanceToken);
+                                        }
+                                    });
+                                })
+                                .catch((err) => {
+                                    console.error('Spot health check failed', err);
+                                    reporter.sendTelemetryEvent('spotCreate/conclude',
+                                                                {'spot.result': TelemetryResult.ERROR,
+                                                                 'spot.reason': 'HEALTH_CHECK_FAILURE',
+                                                                 'spot.detail.useSSL': String(useSSL),
+                                                                 'spot.detail.imageName': imageName,
+                                                                 'spot.detail.spotRegion': spotRegion});
+                                    const portalMsgItem: MessageItem = {title: 'Azure Portal'};
+                                    window.showErrorMessage(`Spot health check failed for ${spotName}: Check the container logs in the Portal.`, portalMsgItem)
+                                    .then((msgItem: MessageItem | undefined) => {
+                                        if (portalMsgItem === msgItem) {
+                                            opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
+                                        }
+                                    });
+                                });
+                            })
+                            .catch((reason: any) => {
+                                console.error('Deployment failed', reason);
+                                window.showErrorMessage(`Unable to create spot: ${reason}`);
+                                reporter.sendTelemetryEvent('spotCreate/conclude',
+                                                                {'spot.result': TelemetryResult.ERROR,
+                                                                 'spot.reason': 'DEPLOYMENT_FAILURE',
+                                                                 'spot.detail.useSSL': String(useSSL),
+                                                                 'spot.detail.imageName': imageName,
+                                                                 'spot.detail.spotRegion': spotRegion});
                             });
-                        })
-                        .catch((err) => {
-                            console.error('Spot health check failed', err);
-                            reporter.sendTelemetryEvent('spotCreate/conclude',
-                                                        {'spot.result': TelemetryResult.ERROR,
-                                                         'spot.reason': 'HEALTH_CHECK_FAILURE',
-                                                         'spot.detail.useSSL': String(useSSL),
-                                                         'spot.detail.imageName': imageName,
-                                                         'spot.detail.spotRegion': spotRegion});
-                            const portalMsgItem: MessageItem = {title: 'Azure Portal'};
-                            window.showErrorMessage(`Spot health check failed for ${spotName}: Check the container logs in the Portal.`, portalMsgItem)
-                            .then((msgItem: MessageItem | undefined) => {
-                                if (portalMsgItem === msgItem) {
-                                    opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
-                                }
-                            });
-                        });
-                    })
-                    .catch((reason: any) => {
-                        console.error('Deployment failed', reason);
-                        window.showErrorMessage(`Unable to create spot: ${reason}`);
+                    } else {
+                        console.log('User cancelled spot create operation.');
                         reporter.sendTelemetryEvent('spotCreate/conclude',
-                                                        {'spot.result': TelemetryResult.ERROR,
-                                                         'spot.reason': 'DEPLOYMENT_FAILURE',
-                                                         'spot.detail.useSSL': String(useSSL),
-                                                         'spot.detail.imageName': imageName,
-                                                         'spot.detail.spotRegion': spotRegion});
-                    });
+                                    {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                                    'spot.reason': 'USER_CANCELLED'});
+                    }
+                });
             });
         });
     });
