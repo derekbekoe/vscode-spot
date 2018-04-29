@@ -70,23 +70,21 @@ When done, `Spot: Disconnect` and then `Spot: Terminate` to shut down the instan
 Inside a running spot, the following ports are available to you: 5001, 5002, 5003.
 
 
+## Known Limitations
+
+- Cannot create Spots with Alpine-based images
+    - The Spot host is not yet available for Alpine-based images
+    - See [Build spot host with support for Alpine](https://github.com/derekbekoe/spot/issues/6)
+- Intellisense & Debugging
+    - Currently, there is no cross-file Intellisense or debugging
+
+
 ## Feedback
 
 * Vote for [popular feature requests](https://github.com/derekbekoe/vscode-spot/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement+sort%3Areactions-%2B1-desc).
 * File a bug in [GitHub Issues](https://github.com/derekbekoe/vscode-spot/issues).
 * Tweet with hashtag [#vscodespot](https://twitter.com/search?q=vscodespot) with other feedback.
 
-
-## Known Limitations
-
-- Intellisense & Debugging
-    - Currently, there is no cross-file Intellisense or debugging
-- Image pull time
-    - Large container images can take a couple minutes to start.
-- Reliability / Resilience
-    - Better handling of loss of connectivity is yet to come.
-- Only Linux containers are supported
-    - We hope to lift this limitation in the future.
 
 ## Developer Setup
 
