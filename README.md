@@ -79,6 +79,11 @@ Inside a running spot, the following ports are available to you: 5001, 5002, 500
     - Currently, there is no cross-file Intellisense or debugging
 
 
+## Debugging Tips
+
+- Check the deployment logs in the Portal. A possible error is that spot name (DNS name) is already taken.
+- Check the ACI logs for each container.
+
 ## Feedback
 
 * Vote for [popular feature requests](https://github.com/derekbekoe/vscode-spot/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement+sort%3Areactions-%2B1-desc).

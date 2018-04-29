@@ -91,12 +91,7 @@ export var deploymentTemplate = {
         }
       }
     ],
-    "outputs": {
-      "containerIPv4Address": {
-        "type": "string",
-        "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups/', variables('spotName'))).ipAddress.ip]"
-      }
-    }
+    "outputs": {}
   };
 
 export var userContainer = {
