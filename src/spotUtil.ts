@@ -19,11 +19,13 @@ export class KnownSpots {
 
     knownSpotsFile: string;
 
+    readonly FILE_MODE = process.platform === 'win32' ? 0o666 : 0o600;
+
     constructor() {
         this.knownSpotsFile = path.join(os.homedir(), '.vscode-spot', 'knownSpots.json');
         ensureDirectoryExistence(this.knownSpotsFile);
         if (!fs.existsSync(this.knownSpotsFile)) {
-            fs.writeFileSync(this.knownSpotsFile, JSON.stringify({}), {mode: 0o600});
+            fs.writeFileSync(this.knownSpotsFile, JSON.stringify({}), {mode: this.FILE_MODE});
         }
     }
 
@@ -36,14 +38,14 @@ export class KnownSpots {
     }
 
     public clear() {
-        fs.writeFileSync(this.knownSpotsFile, JSON.stringify({}), {mode: '0o600'});
+        fs.writeFileSync(this.knownSpotsFile, JSON.stringify({}), {mode: this.FILE_MODE});
         console.log('Cleared known spots.');
     }
     
     public add(spotName: string, hostname: string, instanceToken: string) {
         var spots = this.getAll();
         spots[spotName] = new KnownSpotInfo(hostname, instanceToken);
-        fs.writeFileSync(this.knownSpotsFile, JSON.stringify(spots), {mode: '0o600'});
+        fs.writeFileSync(this.knownSpotsFile, JSON.stringify(spots), {mode: this.FILE_MODE});
         console.log(`Added known spot: name=${spotName} hostname=${hostname}`);
     }
     
@@ -54,7 +56,7 @@ export class KnownSpots {
     public remove(spotName: string) {
         var spots = this.getAll();
         delete spots[spotName];
-        fs.writeFileSync(this.knownSpotsFile, JSON.stringify(spots), {mode: '0o600'});
+        fs.writeFileSync(this.knownSpotsFile, JSON.stringify(spots), {mode: this.FILE_MODE});
         console.log(`Removed known spot: name=${spotName}`);
     }
 

@@ -489,7 +489,7 @@ function terminateSpot() {
                             console.log('Spot deleted');
                             window.showInformationMessage('Spot terminated!');
                             reporter.sendTelemetryEvent('spotTerminate/conclude',
-                            {'spot.result': TelemetryResult.SUCCESS});
+                                                        {'spot.result': TelemetryResult.SUCCESS});
                             knownSpots.remove(spotName);
                         })
                         .catch(() => {
