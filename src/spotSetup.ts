@@ -76,7 +76,7 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
     if (!await rmClient.resourceGroups.checkExistence(resourceGroupName)) {
         const okMsgItem: MessageItem = {title: 'Ok'};
         const cancelMsgItem: MessageItem = {title: 'Cancel'};
-        const msgItem: MessageItem | undefined = await window.showWarningMessage(`To set things up, we are going to create a resource group named ${resourceGroupName}.`, okMsgItem, cancelMsgItem);
+        const msgItem: MessageItem | undefined = await window.showWarningMessage(`To set things up, we are going to create a resource group named ${resourceGroupName} and provision a storage account.`, okMsgItem, cancelMsgItem);
         if (msgItem === cancelMsgItem || msgItem === undefined) {
             throw new Error('Cancelled set up.');
         }
