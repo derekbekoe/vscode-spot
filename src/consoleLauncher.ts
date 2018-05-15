@@ -22,7 +22,7 @@ function getWindowSize() {
 async function initializeTerminal(accessToken: string, consoleUri: string) {
 	const initialGeometry = getWindowSize();
 	return request({
-		uri: consoleUri + '/terminals?cols=' + initialGeometry.cols + '&rows=' + initialGeometry.rows + '&token=' + accessToken,
+		uri: `${consoleUri}/terminals?cols=${initialGeometry.cols}&rows=${initialGeometry.rows}&token=${accessToken}`,
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ async function resize(accessToken: string, consoleUri: string, termId: string) {
 
 		const { cols, rows } = getWindowSize();
 		const response = await request({
-			uri: consoleUri + '/terminals/' + termId + '/size?cols=' + cols + '&rows=' + rows + '&token=' + accessToken,
+			uri: `${consoleUri}/terminals/${termId}/size?cols=${cols}&rows=${rows}&token=${accessToken}`,
 			method: 'POST',
 			headers: {
 				'Accept': 'application/json',
