@@ -166,6 +166,7 @@ const ipcQueue = new Queue<any>();
 
 // Adapted from https://github.com/Microsoft/vscode-azure-account
 async function createSpotConsole(session: SpotSession): Promise<void> {
+    // TODO-DEREK Move out and keep async
     const isWindows = process.platform === 'win32';
     const hostname = session.hostname;
     const token = session.token;
@@ -219,6 +220,7 @@ async function createSpotConsole(session: SpotSession): Promise<void> {
 
 function connectToSpot(hostname: string, token: string): Promise<null> {
     reporter.sendTelemetryEvent('spotConnect/initiate');
+    // TODO-DEREK Move out and make async
     return new Promise((resolve, reject) => {
         const isWindows = process.platform === 'win32';
         if (isWindows) {
@@ -315,6 +317,7 @@ function cmdSpotDisconnect() {
 
 function disconnectFromSpot(session: SpotSession | null) {
     reporter.sendTelemetryEvent('spotDisconnect/initiate');
+    // TODO-DEREK Move out and make async
     if (activeSession != null) {
         // Check if there are any unsaved files from the spot
         for (var te of window.visibleTextEditors) {
@@ -375,6 +378,7 @@ function terminateSpot() {
                                      'spot.reason': 'NO_AZURE_SUBSCRIPTION'});
         return;
     }
+    // TODO-DEREK Move out and make async
     const spotNamePrompt = Object.keys(knownSpots.getAll()).length > 0 ? `Known spots: ${Array.from(Object.keys(knownSpots.getAll()))}` : undefined;
     window.showInputBox({placeHolder: 'Name of spot to terminate/delete.', ignoreFocusOut: true, prompt: spotNamePrompt}).then((spotName) => {
         if (spotName) {
