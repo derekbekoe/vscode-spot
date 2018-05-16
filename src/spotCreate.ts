@@ -100,7 +100,7 @@ function validateSpotName(val: string) {
     return !val.includes(' ') ? null : 'Name cannot contain spaces';
 }
 
-export async function createSpot(azureSub: AzureSubscription): Promise<ISpotCreationData> {
+export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCreationData> {
     const spotName: string | undefined = await window.showInputBox(
             {placeHolder: 'Name of spot.',
             ignoreFocusOut: true,

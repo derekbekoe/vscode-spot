@@ -1,12 +1,13 @@
 import { window, workspace, MessageItem } from 'vscode';
-import { AzureSubscription } from './azure-account.api';
-import { ResourceManagementClient } from 'azure-arm-resource';
-import StorageManagementClient = require('azure-arm-storage');
-import { FileService } from 'azure-storage';
-import { randomBytes } from './ipc';
 import * as request from 'request';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
+import { ResourceManagementClient } from 'azure-arm-resource';
+import StorageManagementClient = require('azure-arm-storage');
+import { FileService } from 'azure-storage';
+import { AzureSubscription } from './azure-account.api';
+import { randomBytes } from './ipc';
+import { SpotSetupError } from './spotUtil'
 
 export const DEFAULT_RG_NAME = 'vscode-spot';
 

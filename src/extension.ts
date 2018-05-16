@@ -1,6 +1,5 @@
 import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem, workspace } from 'vscode';
 import { TelemetryReporter, TelemetryResult } from './telemetry';
-import * as path from 'path';
 import * as cp from 'child_process';
 import * as semver from 'semver';
 import opn = require('opn');
@@ -9,12 +8,13 @@ import { AzureAccount, AzureSubscription } from './azure-account.api';
 import { ResourceManagementClient } from 'azure-arm-resource';
 
 import { createTelemetryReporter } from './telemetry';
-import { createServer, readJSON, Queue } from './ipc';
+import { ipcQueue } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { SpotFileTracker, openFileEditor } from './spotFiles';
 import { KnownSpots, SpotSession, spotHealthCheck, SpotSetupError, UserCancelledError } from './spotUtil';
 import { DEFAULT_RG_NAME } from './spotSetup';
-import { createSpot, ISpotCreationData, CreationHealthCheckError, SpotDeploymentError } from './spotCreation';
+import { spotCreate, ISpotCreationData, CreationHealthCheckError, SpotDeploymentError } from './spotCreate';
+import { spotConnect, WindowsRequireNodeError } from './spotConnect';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -95,7 +95,7 @@ function cmdSpotCreate() {
                                     'spot.reason': 'NO_AZURE_SUBSCRIPTION'});
         return;
     }
-    createSpot(azureSub)
+    spotCreate(azureSub)
     .then((res: ISpotCreationData) => {
         reporter.sendTelemetryEvent('spotCreate/conclude',
                                     {'spot.result': TelemetryResult.SUCCESS,
@@ -162,122 +162,32 @@ function cmdSpotCreate() {
     });
 }
 
-const ipcQueue = new Queue<any>();
-
-// Adapted from https://github.com/Microsoft/vscode-azure-account
-async function createSpotConsole(session: SpotSession): Promise<void> {
-    // TODO-DEREK Move out and keep async
-    const isWindows = process.platform === 'win32';
-    const hostname = session.hostname;
-    const token = session.token;
-    let shellPath = isWindows ? 'node.exe' : path.join(__dirname, '../../console_bin/node.sh');
-    let modulePath = path.join(__dirname, 'consoleLauncher');
-    if (isWindows) {
-        modulePath = modulePath.replace(/\\/g, '\\\\');
-    }
-    const shellArgs = [
-        process.argv0,
-        '-e',
-        `require('${modulePath}').main()`
-    ]
-    if (isWindows) {
-        shellArgs.shift();
-    }
-    // ipc
-    const ipc = await createServer('vscode-spot-console', async (req, res) => {
-        let dequeue = false;
-        for (const message of await readJSON<any>(req)) {
-            if (message.type === 'poll') {
-                dequeue = true;
-            } else if (message.type === 'log') {
-                console.log(...message.args);
-            } else if (message.type === 'status') {
-            }
-        }
-        let response = [];
-        if (dequeue) {
-            try {
-                response = await ipcQueue.dequeue(60000);
-            } catch (err) {
-            }
-        }
-        res.write(JSON.stringify(response));
-        res.end();
-    });
-    const terminal = window.createTerminal({
-        name: `Spot ${hostname}`,
-        shellPath: shellPath,
-        shellArgs: shellArgs,
-        env: {'CONSOLE_IPC': ipc.ipcHandlePath}
-    });
-    terminal.show();
-    ipcQueue.push({
-        type: 'connect',
-        accessToken: token,
-        consoleUri: hostname
-    });
-}
-
-function connectToSpot(hostname: string, token: string): Promise<null> {
+function connectToSpot(hostname: string, instanceToken: string) {
     reporter.sendTelemetryEvent('spotConnect/initiate');
-    // TODO-DEREK Move out and make async
-    return new Promise((resolve, reject) => {
-        const isWindows = process.platform === 'win32';
-        if (isWindows) {
-            try {
-                let stdout = cp.execSync('node.exe --version').toString();
-                const version = stdout[0] === 'v' && stdout.substr(1).trim();
-                if (version && semver.valid(version) && !semver.gte(version, '6.0.0')) {
-                    throw new Error('Bad node version');
-                }
-            } catch (err) {
-                console.log(err);
-                const open: MessageItem = { title: "Download Node.js" };
-                const message = "Opening a Spot currently requires Node.js 6 or later to be installed (https://nodejs.org) on Windows.";
-                window.showInformationMessage(message, open)
-                .then((msgItem: MessageItem | undefined) => {
-                    if (msgItem === open) {
-                        opn('https://nodejs.org');
-                    }
-                });
-                reporter.sendTelemetryEvent('spotConnect/conclude',
-                                            {'spot.result': TelemetryResult.USER_RECOVERABLE,
-                                            'spot.reason': 'WINDOWS_REQUIRE_NODE'});
-                return;
-            }
-        }
-        spotHealthCheck(hostname, token)
-        .then(() => {
-            activeSession = new SpotSession(hostname, token);
-            spotFileTracker.connect(activeSession);
-            createSpotConsole(activeSession).then(() => {
-                commands.executeCommand('setContext', 'canShowSpotExplorer', true);
-                window.showInformationMessage(`Connected to ${hostname}`);
-                updateStatusBar(`${hostname} (connected)`);
-                reporter.sendTelemetryEvent('spotConnect/conclude',
-                                            {'spot.result': TelemetryResult.SUCCESS});
-                resolve();
-            }).catch(() => {
-                activeSession = null;
-                commands.executeCommand('setContext', 'canShowSpotExplorer', false);
-                console.error('An error occurred whilst creating spot console.');
-                reporter.sendTelemetryEvent('spotConnect/conclude',
-                                            {'spot.result': TelemetryResult.ERROR,
-                                            'spot.reason': 'CONSOLE_LAUNCH_FAILURE'});
-                reject();
-            });
-        })
-        .catch((err) => {
-            activeSession = null;
-            commands.executeCommand('setContext', 'canShowSpotExplorer', false);
-            window.showErrorMessage(`Failed to connect to ${hostname}`);
-            updateStatusBar('Not connected');
-            statusBarItem.show();
+    spotConnect(hostname, instanceToken, spotFileTracker)
+    .then((session: SpotSession) => {
+        activeSession = session;
+        commands.executeCommand('setContext', 'canShowSpotExplorer', true);
+        window.showInformationMessage(`Connected to ${hostname}`);
+        updateStatusBar(`${hostname} (connected)`);
+        reporter.sendTelemetryEvent('spotConnect/conclude',
+                                    {'spot.result': TelemetryResult.SUCCESS});
+    })
+    .catch((err: any) => {
+        activeSession = null;
+        commands.executeCommand('setContext', 'canShowSpotExplorer', false);
+        window.showErrorMessage(`Failed to connect to ${hostname}`);
+        updateStatusBar('Not connected');
+        statusBarItem.show();
+        if (err instanceof WindowsRequireNodeError) {
             reporter.sendTelemetryEvent('spotConnect/conclude',
-                                            {'spot.result': TelemetryResult.ERROR,
-                                            'spot.reason': 'HEALTH_CHECK_FAILURE'});
-            reject();
-        });
+                                {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                                'spot.reason': 'WINDOWS_REQUIRE_NODE'});
+        } else {
+            reporter.sendTelemetryEvent('spotConnect/conclude',
+                                        {'spot.result': TelemetryResult.ERROR,
+                                        'spot.reason': 'HEALTH_CHECK_FAILURE'});
+        }
     });
 }
 
