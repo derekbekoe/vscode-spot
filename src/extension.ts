@@ -191,8 +191,6 @@ async function createSpotConsole(session: SpotSession): Promise<void> {
             } else if (message.type === 'log') {
                 console.log(...message.args);
             } else if (message.type === 'status') {
-                // state.status = message.status;
-                // event.fire(state.status);
             }
         }
         let response = [];
@@ -200,7 +198,6 @@ async function createSpotConsole(session: SpotSession): Promise<void> {
             try {
                 response = await ipcQueue.dequeue(60000);
             } catch (err) {
-                // ignore timeout
             }
         }
         res.write(JSON.stringify(response));
