@@ -2,6 +2,11 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 import { URL } from 'url';
+import * as requestretry from 'requestretry';
+
+export class SpotSetupError extends Error {}
+export class UserCancelledError extends Error {}
+export class HealthCheckError extends Error {}
 
 export class SpotSession {
     constructor(public hostname: string, public token: string) {}
@@ -18,6 +23,21 @@ export function ensureDirectoryExistence(filePath: string) {
     }
     ensureDirectoryExistence(dirname);
     fs.mkdirSync(dirname);
+}
+
+export function spotHealthCheck(hostname: string, instanceToken: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+        console.log(`Requesting health check from ${hostname}`);
+        requestretry({url: `${hostname}/health-check?token=${instanceToken}`, timeout: 60*1000, maxAttempts: 5, retryDelay: 5000}, (err, res, body) => {
+            if (err) {
+                console.error('Spot health check failed', err);
+                reject(err);
+            } else {
+                console.log('Health check successful.', body);
+                resolve();
+            }
+        });
+    });
 }
 
 class KnownSpotInfo {

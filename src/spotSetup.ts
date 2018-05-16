@@ -66,7 +66,7 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
             return new SpotSetupConfig(resourceGroupName, azureFileShareName1, azureFileShareName2,
                                        azureStorageAccountName, azureStorageAccountKey);
         } else {
-            throw new Error('Please set up all the configuration variables.');
+            throw new SpotSetupError('Please set up all the configuration variables.');
         }
     }
     let azureFileShareName2 = '';
@@ -78,7 +78,7 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
         const cancelMsgItem: MessageItem = {title: 'Cancel'};
         const msgItem: MessageItem | undefined = await window.showWarningMessage(`To set things up, we are going to create a resource group named ${resourceGroupName} and provision a storage account.`, okMsgItem, cancelMsgItem);
         if (msgItem === cancelMsgItem || msgItem === undefined) {
-            throw new Error('Cancelled set up.');
+            throw new SpotSetupError('Cancelled set up.');
         }
         await rmClient.resourceGroups.createOrUpdate(resourceGroupName, {location: 'westus'});
         console.log(`Created resource group ${resourceGroupName}`);
@@ -98,7 +98,7 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
             let errMsg = 'Unable to get a unique storage account name.';
             console.log(errMsg);
             await rmClient.resourceGroups.deleteMethod(resourceGroupName);
-            throw new Error(`${errMsg} Please try again.`);
+            throw new SpotSetupError(`${errMsg} Please try again.`);
         }
         azureStorageAccountName = newStName;
         console.log(`Found unique storage account name of '${azureStorageAccountName}'. Creating storage account...`);
@@ -108,7 +108,7 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
         if (stKeysResult === undefined || stKeysResult.keys === undefined) {
             console.log('Unable to get storage account key.');
             await rmClient.resourceGroups.deleteMethod(resourceGroupName);
-            throw new Error(`Please try again.`);
+            throw new SpotSetupError(`Please try again.`);
         }
         azureStorageAccountKey = stKeysResult.keys[0].value;
         const fileService = new FileService(azureStorageAccountName, azureStorageAccountKey);
@@ -130,13 +130,13 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
         const stAccounts = await stClient.storageAccounts.listByResourceGroup(resourceGroupName);
         if (stAccounts.length !== 1) {
             console.log(`Expected only 1 storage account. Found ${stAccounts.length}`);
-            throw new Error(`Please delete the '${resourceGroupName}' resource group and try again.`);
+            throw new SpotSetupError(`Please delete the '${resourceGroupName}' resource group and try again.`);
         }
         azureStorageAccountName = stAccounts[0].name!;
         const stKeysResult = await stClient.storageAccounts.listKeys(resourceGroupName, azureStorageAccountName);
         if (stKeysResult === undefined || stKeysResult.keys === undefined) {
             console.log(`Unable to get storage account key.`);
-            throw new Error(`Please delete the '${resourceGroupName}' resource group and try again.`);
+            throw new SpotSetupError(`Please delete the '${resourceGroupName}' resource group and try again.`);
         }
         azureStorageAccountKey = stKeysResult.keys[0].value;
         const fileService = new FileService(azureStorageAccountName, azureStorageAccountKey);
@@ -144,14 +144,14 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
         let shareResult = await handleStorageDataPlane<FileService.ShareResult>(fileService, FileService.prototype.doesShareExist, azureFileShareName1);
         if (!shareResult.exists) {
             console.log(`The share ${azureFileShareName1} does not exist in storage account ${azureStorageAccountName}`);
-            throw new Error(`Please delete the '${resourceGroupName}' resource group and try again.`);
+            throw new SpotSetupError(`Please delete the '${resourceGroupName}' resource group and try again.`);
         }
         if (!(await handleStorageDataPlane<FileService.FileResult>(fileService, FileService.prototype.doesFileExist, azureFileShareName1, '', 'spot-host')).exists ||
             !(await handleStorageDataPlane<FileService.FileResult>(fileService, FileService.prototype.doesFileExist, azureFileShareName1, '', 'pty.node')).exists ||
             !(await handleStorageDataPlane<FileService.FileResult>(fileService, FileService.prototype.doesFileExist, azureFileShareName1, '', 'certbot.sh')).exists) {
             const errMsg: string = `The share ${azureFileShareName1} in storage account ${azureStorageAccountName} does not contain the required files`;
             console.log(errMsg);
-            throw new Error(`${errMsg}. Please delete the '${resourceGroupName}' resource group and try again.`);
+            throw new SpotSetupError(`${errMsg}. Please delete the '${resourceGroupName}' resource group and try again.`);
         }
     }
     if (azureFileShareName1 && azureStorageAccountName && azureStorageAccountKey) {
@@ -159,6 +159,6 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
         return new SpotSetupConfig(resourceGroupName, azureFileShareName1, azureFileShareName2,
             azureStorageAccountName, azureStorageAccountKey);
     } else {
-        throw new Error(`Please delete the '${resourceGroupName}' resource group and try again.`);
+        throw new SpotSetupError(`Please delete the '${resourceGroupName}' resource group and try again.`);
     }
 }
