@@ -13,9 +13,8 @@ import { createTelemetryReporter } from './telemetry';
 import { createServer, readJSON, Queue, randomBytes } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { SpotFileTracker, openFileEditor } from './spotFiles';
-import { SpotSession } from './session';
 import { deploymentTemplate, certbotContainer, userContainer } from './spotDeploy';
-import { KnownSpots } from './spotUtil';
+import { KnownSpots, SpotSession } from './spotUtil';
 import { getSpotSetupConfig, SpotSetupConfig, DEFAULT_RG_NAME } from './spotSetup';
 
 let reporter: TelemetryReporter;

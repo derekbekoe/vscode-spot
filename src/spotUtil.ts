@@ -1,6 +1,15 @@
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
+import { URL } from 'url';
+
+export class SpotSession {
+    constructor(public hostname: string, public token: string) {}
+}
+
+export function getWsProtocol(consoleUrl: URL) {
+    return consoleUrl.protocol.startsWith('https') ? 'wss' : 'ws';
+}
 
 export function ensureDirectoryExistence(filePath: string) {
     var dirname = path.dirname(filePath);
@@ -9,7 +18,7 @@ export function ensureDirectoryExistence(filePath: string) {
     }
     ensureDirectoryExistence(dirname);
     fs.mkdirSync(dirname);
-  }
+}
 
 class KnownSpotInfo {
     constructor(public hostname: string, public instanceToken: string){}

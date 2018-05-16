@@ -3,6 +3,7 @@ import * as WS from 'ws';
 import * as http from 'http';
 import { URL } from 'url';
 import { sendData, readJSON } from './ipc';
+import { getWsProtocol } from './spotUtil';
 
 
 async function delay(ms: number) {
@@ -153,7 +154,7 @@ async function connectTerminal(ipcHandle: string, accessToken: string, consoleUr
 		const res = response.body;
 		const termId = res;
 		const consoleUrl = new URL(consoleUri);
-		const socketProtocol = consoleUrl.protocol.startsWith('https') ? 'wss' : 'ws';
+		const socketProtocol = getWsProtocol(consoleUrl);
 		const socketUri = `${socketProtocol}://${consoleUrl.hostname}:${consoleUrl.port}/terminals/${termId}/?token=${accessToken}`;
 		connectSocket(ipcHandle, socketUri);
 

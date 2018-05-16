@@ -1,6 +1,5 @@
 import { window, Uri, workspace, TextDocumentWillSaveEvent, EventEmitter, Event, TextDocumentSaveReason } from 'vscode';
-import { SpotSession } from './session';
-import { ensureDirectoryExistence } from './spotUtil';
+import { SpotSession, ensureDirectoryExistence, getWsProtocol } from './spotUtil';
 import { URL } from 'url';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
@@ -10,7 +9,10 @@ import * as tmp from 'tmp';
 import * as rimraf from 'rimraf';
 
 export class SpotFile {
-    constructor(public isDirectory: boolean, public path: string, public spotSession: SpotSession, public children: Map<string, SpotFile>=new Map<string, SpotFile>()) {}
+    constructor(public isDirectory: boolean,
+                public path: string,
+                public spotSession: SpotSession,
+                public children: Map<string, SpotFile>=new Map<string, SpotFile>()) {}
 }
 
 export class SpotFileTracker {
@@ -40,7 +42,7 @@ export class SpotFileTracker {
 
   public connect(session: SpotSession) {
     const url = new URL(session.hostname);
-    const socketProtocol = url.protocol.startsWith('https') ? 'wss' : 'ws';
+    const socketProtocol = getWsProtocol(url);
     const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/files/?token=${session.token}`;
     var handledRootDir: boolean = false;
     this.files = new Map<string, SpotFile>();
@@ -112,7 +114,7 @@ export function openFileEditor(documentPath: any, session: SpotSession) {
     return;
   }
   const url = new URL(session.hostname);
-  const socketProtocol = url.protocol.startsWith('https') ? 'wss' : 'ws';
+  const socketProtocol = getWsProtocol(url);
   const fileId = createHash('md5').update(documentPath).digest('hex');
   const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/file/${fileId}/?token=${session.token}`;
   const ws = new WS(socketUri);
