@@ -119,3 +119,5 @@ export class Queue<T> {
 		});
 	}
 }
+
+export const ipcQueue = new Queue<any>();

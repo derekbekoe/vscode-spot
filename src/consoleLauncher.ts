@@ -3,6 +3,7 @@ import * as WS from 'ws';
 import * as http from 'http';
 import { URL } from 'url';
 import { sendData, readJSON } from './ipc';
+import { getWsProtocol } from './spotUtil';
 
 
 async function delay(ms: number) {
@@ -22,7 +23,7 @@ function getWindowSize() {
 async function initializeTerminal(accessToken: string, consoleUri: string) {
 	const initialGeometry = getWindowSize();
 	return request({
-		uri: consoleUri + '/terminals?cols=' + initialGeometry.cols + '&rows=' + initialGeometry.rows + '&token=' + accessToken,
+		uri: `${consoleUri}/terminals?cols=${initialGeometry.cols}&rows=${initialGeometry.rows}&token=${accessToken}`,
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -102,7 +103,7 @@ async function resize(accessToken: string, consoleUri: string, termId: string) {
 
 		const { cols, rows } = getWindowSize();
 		const response = await request({
-			uri: consoleUri + '/terminals/' + termId + '/size?cols=' + cols + '&rows=' + rows + '&token=' + accessToken,
+			uri: `${consoleUri}/terminals/${termId}/size?cols=${cols}&rows=${rows}&token=${accessToken}`,
 			method: 'POST',
 			headers: {
 				'Accept': 'application/json',
@@ -153,7 +154,7 @@ async function connectTerminal(ipcHandle: string, accessToken: string, consoleUr
 		const res = response.body;
 		const termId = res;
 		const consoleUrl = new URL(consoleUri);
-		const socketProtocol = consoleUrl.protocol.startsWith('https') ? 'wss' : 'ws';
+		const socketProtocol = getWsProtocol(consoleUrl);
 		const socketUri = `${socketProtocol}://${consoleUrl.hostname}:${consoleUrl.port}/terminals/${termId}/?token=${accessToken}`;
 		connectSocket(ipcHandle, socketUri);
 
