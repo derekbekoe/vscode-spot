@@ -1,4 +1,7 @@
 import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
+import * as dns from 'dns';
+import * as util from 'util';
+
 import { MessageItem, window, workspace } from 'vscode';
 
 import { AzureSubscription } from './azure-account.api';
@@ -6,6 +9,9 @@ import { randomBytes } from './ipc';
 import { certbotContainer, deploymentTemplateBase, userContainer } from './spotDeploy';
 import { getSpotSetupConfig, SpotSetupConfig } from './spotSetup';
 import { HealthCheckError, spotHealthCheck, UserCancelledError } from './spotUtil';
+
+// tslint:disable-next-line:no-var-requires
+require('util.promisify').shim();
 
 const DEFAULT_SPOT_REGION = 'westus';
 const DEFAULT_SPOT_FILE_WATCHER_PATH = '/root';
@@ -60,12 +66,12 @@ export class CreationHealthCheckError extends HealthCheckError {
 export async function configureDeploymentTemplate(
     spotName: string,
     imageName: string,
+    spotRegion: string,
     azureSub: AzureSubscription,
     spotConfig: SpotSetupConfig): Promise<IDeploymentTemplateConfig> {
     const buffer: Buffer = await randomBytes(256);
     const instanceToken = buffer.toString('hex');
 
-    const spotRegion: string = workspace.getConfiguration('spot').get('azureRegion') || DEFAULT_SPOT_REGION;
     const deploymentTemplate = JSON.parse(JSON.stringify(deploymentTemplateBase));
     deploymentTemplate.variables.spotName = `${spotName}`;
     deploymentTemplate.variables.container1image = imageName;
@@ -127,14 +133,32 @@ function validateSpotName(val: string) {
 }
 
 export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCreationData> {
-    const spotName: string | undefined = await window.showInputBox(
-            {placeHolder: 'Name of spot.',
-            ignoreFocusOut: true,
-            validateInput: validateSpotName
-        });
-    if (!spotName) {
-        throw new UserCancelledError('No spot name specified. Operation cancelled.');
-    }
+    // Get the region at the beginning since we need to to validate the spot name DNS label.
+    const spotRegion: string = workspace.getConfiguration('spot').get('azureRegion') || DEFAULT_SPOT_REGION;
+    let spotName: string | undefined;
+    let spotDNSLabelOk: boolean = false;
+    do {
+        spotName = await window.showInputBox(
+                {placeHolder: 'Name of spot.',
+                ignoreFocusOut: true,
+                validateInput: validateSpotName
+            });
+        if (!spotName) {
+            throw new UserCancelledError('No spot name specified. Operation cancelled.');
+        }
+        try {
+            const fullHostname = `${spotName}.${spotRegion}.azurecontainer.io`;
+            await util.promisify(dns.lookup)(fullHostname);
+            console.log('Spot DNS label check', `${fullHostname} appears taken. Try another.`);
+            // tslint:disable-next-line:max-line-length
+            window.showWarningMessage(`Spot name ${spotName} in region ${spotRegion} is taken. Please enter a different name or try again later.`);
+            spotDNSLabelOk = false;
+        } catch (err) {
+            console.log('Spot DNS label check OK', err.message);
+            // DNS label available or failed to check so continue.
+            spotDNSLabelOk = true;
+        }
+    } while (!spotDNSLabelOk);
     const imageName: string | undefined = await window.showInputBox({
         placeHolder: 'Container image name (e.g. ubuntu:xenial)',
         ignoreFocusOut: true});
@@ -145,6 +169,7 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
     const deploymentName: string = getDeploymentName();
     const deploymentConfig: IDeploymentTemplateConfig = await configureDeploymentTemplate(spotName,
                                                                                           imageName,
+                                                                                          spotRegion,
                                                                                           azureSub,
                                                                                           spotConfig);
     const deploymentOptions: ResourceModels.Deployment = {

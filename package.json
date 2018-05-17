@@ -19,7 +19,7 @@
     "aiKey": "14c91bb7-84bd-43e2-80f0-1977e0bc7e49",
     "preview": true,
     "engines": {
-        "vscode": "^1.20.0"
+        "vscode": "^1.22.0"
     },
     "categories": [
         "Other"
@@ -153,6 +153,7 @@
         "rimraf": "^2.6.2",
         "semver": "^5.5.0",
         "tmp": "0.0.33",
+        "util.promisify": "^1.0.0",
         "vsce": "^1.37.6",
         "ws": "^5.0.0"
     }
