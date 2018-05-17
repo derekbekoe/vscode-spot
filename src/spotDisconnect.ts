@@ -1,4 +1,4 @@
-import { window, MessageItem } from 'vscode';
+import { window, MessageItem, commands } from 'vscode';
 import opn = require('opn');
 
 import { SpotSession } from "./spotUtil";
@@ -24,8 +24,7 @@ export async function spotDisconnect(session: SpotSession | null, spotFileTracke
                 if (portalMsgItem === msgItem) {
                     opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
                 } else if (terminateMsgItem === msgItem) {
-                    // TODO-DEREK
-                    // terminateSpot();
+                    commands.executeCommand('spot.Terminate');
                 }
             });
         } else {
