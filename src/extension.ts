@@ -13,6 +13,7 @@ import { DEFAULT_RG_NAME } from './spotSetup';
 import { spotCreate, ISpotCreationData, CreationHealthCheckError, SpotDeploymentError } from './spotCreate';
 import { spotConnect, WindowsRequireNodeError } from './spotConnect';
 import { spotDisconnect } from './spotDisconnect';
+import { spotTerminate, MissingConfigVariablesError, ACIDeleteError } from './spotTerminate';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -260,62 +261,35 @@ function terminateSpot() {
                                      'spot.reason': 'NO_AZURE_SUBSCRIPTION'});
         return;
     }
-    // TODO-DEREK Move out and make async
-    const spotNamePrompt = Object.keys(knownSpots.getAll()).length > 0 ? `Known spots: ${Array.from(Object.keys(knownSpots.getAll()))}` : undefined;
-    window.showInputBox({placeHolder: 'Name of spot to terminate/delete.', ignoreFocusOut: true, prompt: spotNamePrompt}).then((spotName) => {
-        if (spotName) {
-            const confirmYesMsgItem = {title: 'Yes'};
-            const confirmNoMsgItem = {title: 'No'};
-            window.showWarningMessage(`Are you sure you want to delete the spot ${spotName}`, confirmYesMsgItem, confirmNoMsgItem)
-            .then((msgItem: MessageItem | undefined) => {
-                if (msgItem === confirmYesMsgItem) {
-                        console.log(`Attempting to terminate spot ${spotName}`);
-                        window.showInformationMessage(`Attempting to terminate spot ${spotName}`);
-                        const rmClient = new ResourceManagementClient(azureSub.session.credentials, azureSub.subscription.subscriptionId!);
-                        const resourceGroupName = workspace.getConfiguration('spot').get<string>('azureResourceGroup') || DEFAULT_RG_NAME;
-                        if (!resourceGroupName) {
-                            const moreInfoItem: MessageItem = {title: 'More Info'};
-                            window.showErrorMessage('Please set up the resource group in the configuration.', moreInfoItem)
-                            .then((msgItem: MessageItem | undefined) => {
-                                if (msgItem === moreInfoItem) {
-                                    opn('https://github.com/derekbekoe/vscode-spot#configuration');
-                                }
-                            });
-                            reporter.sendTelemetryEvent('spotTerminate/conclude',
+    spotTerminate(azureSub, knownSpots)
+    .then(() => {
+        reporter.sendTelemetryEvent('spotTerminate/conclude', {'spot.result': TelemetryResult.SUCCESS});
+    })
+    .catch((ex: any) => {
+        if (ex instanceof UserCancelledError) {
+            console.log('User cancelled spot delete operation.', ex.message);
+            reporter.sendTelemetryEvent('spotTerminate/conclude',
+                        {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                        'spot.reason': 'USER_CANCELLED'});
+        } else if (ex instanceof MissingConfigVariablesError) {
+            reporter.sendTelemetryEvent('spotTerminate/conclude',
                                     {'spot.result': TelemetryResult.USER_RECOVERABLE,
                                     'spot.reason': 'MISSING_CONFIGURATION_VARIABLES'});
-                            return;
-                        }
-                        rmClient.resources.deleteMethod(resourceGroupName, "Microsoft.ContainerInstance", "",
-                                                        "containerGroups", spotName, "2018-04-01")
-                        .then(() => {
-                            console.log('Spot deleted');
-                            window.showInformationMessage('Spot terminated!');
-                            reporter.sendTelemetryEvent('spotTerminate/conclude',
-                                                        {'spot.result': TelemetryResult.SUCCESS});
-                            knownSpots.remove(spotName);
-                        })
-                        .catch(() => {
-                            const portalMsgItem: MessageItem = {title: 'Azure Portal'};
-                            reporter.sendTelemetryEvent('spotTerminate/conclude',
-                                    {'spot.result': TelemetryResult.USER_RECOVERABLE,
-                                     'spot.reason': 'ARM_RESOURCE_DELETE_FAILURE'});
-                            window.showErrorMessage('Unable to terminate spot. Open the Azure portal and delete the container group from there.', portalMsgItem)
-                            .then((msgItem: MessageItem | undefined) => {
-                                if (portalMsgItem === msgItem) {
-                                    opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
-                                }
-                            });
-                        });
-                    } else {
-                        console.log('User cancelled spot delete operation.');
-                        reporter.sendTelemetryEvent('spotTerminate/conclude',
-                                    {'spot.result': TelemetryResult.USER_RECOVERABLE,
-                                    'spot.reason': 'USER_CANCELLED'});
-                    }
-                });
-            }
-        });
+        } else if (ex instanceof ACIDeleteError) {
+            const portalMsgItem: MessageItem = {title: 'Azure Portal'};
+            reporter.sendTelemetryEvent('spotTerminate/conclude',
+                    {'spot.result': TelemetryResult.USER_RECOVERABLE,
+                        'spot.reason': 'ARM_RESOURCE_DELETE_FAILURE'});
+            window.showErrorMessage('Unable to terminate spot. Open the Azure portal and delete the container group from there.', portalMsgItem)
+            .then((msgItem: MessageItem | undefined) => {
+                if (portalMsgItem === msgItem) {
+                    opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
+                }
+            });
+        } else {
+            console.error(ex.message);
+        }
+    });
 }
 
 export function deactivate() {
