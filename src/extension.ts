@@ -1,20 +1,18 @@
 import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem, workspace } from 'vscode';
 import { TelemetryReporter, TelemetryResult } from './telemetry';
-import * as cp from 'child_process';
-import * as semver from 'semver';
 import opn = require('opn');
 import { URL } from 'url';
 import { AzureAccount, AzureSubscription } from './azure-account.api';
 import { ResourceManagementClient } from 'azure-arm-resource';
 
 import { createTelemetryReporter } from './telemetry';
-import { ipcQueue } from './ipc';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { SpotFileTracker, openFileEditor } from './spotFiles';
-import { KnownSpots, SpotSession, spotHealthCheck, SpotSetupError, UserCancelledError } from './spotUtil';
+import { KnownSpots, SpotSession, SpotSetupError, UserCancelledError } from './spotUtil';
 import { DEFAULT_RG_NAME } from './spotSetup';
 import { spotCreate, ISpotCreationData, CreationHealthCheckError, SpotDeploymentError } from './spotCreate';
 import { spotConnect, WindowsRequireNodeError } from './spotConnect';
+import { spotDisconnect } from './spotDisconnect';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -222,46 +220,20 @@ function cmdSpotConnect() {
 
 function cmdSpotDisconnect() {
     reporter.sendTelemetryEvent('onCommand/spotDisconnect');
-    disconnectFromSpot(activeSession);
+    disconnectFromSpot();
 }
 
-function disconnectFromSpot(session: SpotSession | null) {
+function disconnectFromSpot() {
     reporter.sendTelemetryEvent('spotDisconnect/initiate');
-    // TODO-DEREK Move out and make async
-    if (activeSession != null) {
-        // Check if there are any unsaved files from the spot
-        for (var te of window.visibleTextEditors) {
-            if (te.document.isDirty && te.document.fileName.indexOf('_spot') > -1) {
-                window.showWarningMessage('Please save unsaved files in spot.');
-                reporter.sendTelemetryEvent('spotDisconnect/conclude',
-                                            {'spot.result': TelemetryResult.USER_RECOVERABLE,
-                                            'spot.reason': 'UNSAVED_FILES'});
-                return;
-            }
-        }
-        spotFileTracker.disconnect();
-        ipcQueue.push({ type: 'exit' });
-        commands.executeCommand('setContext', 'canShowSpotExplorer', false);
-        if (activeSession.hostname.indexOf('azurecontainer.io') > -1) {
-            const portalMsgItem: MessageItem = {title: 'Azure Portal'};
-            const terminateMsgItem: MessageItem = {title: 'Terminate'};
-            window.showInformationMessage('Disconnected from spot. Remember to review your currently running Azure spots to prevent unexpected charges.', portalMsgItem, terminateMsgItem)
-            .then((msgItem: MessageItem | undefined) => {
-                if (portalMsgItem === msgItem) {
-                    opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
-                } else if (terminateMsgItem === msgItem) {
-                    terminateSpot();
-                }
-            });
-        } else {
-            window.showInformationMessage('Disconnected from spot.');
-        }
-    } else {
-        window.showInformationMessage('Not currently connected to a spot.');
-    }
-    activeSession = null;
-    updateStatusBar('Not connected');
-    reporter.sendTelemetryEvent('spotDisconnect/conclude', {'spot.result': TelemetryResult.SUCCESS});
+    spotDisconnect(activeSession, spotFileTracker)
+    .then(() => {
+        activeSession = null;
+        updateStatusBar('Not connected');
+        reporter.sendTelemetryEvent('spotDisconnect/conclude', {'spot.result': TelemetryResult.SUCCESS});
+    })
+    .catch((err: any) => {
+        console.error(err);
+    });
 }
 
 function cmdSpotTerminate() {
@@ -271,7 +243,7 @@ function cmdSpotTerminate() {
         window.showWarningMessage('Disconnect from the current spot before terminating a spot.', disConnectMsgItem)
         .then((msgItem: MessageItem | undefined) => {
             if (disConnectMsgItem === msgItem) {
-                disconnectFromSpot(activeSession);
+                disconnectFromSpot();
             }
         });
     } else {
@@ -342,7 +314,7 @@ function terminateSpot() {
                                     'spot.reason': 'USER_CANCELLED'});
                     }
                 });
-        }
+            }
         });
 }
 

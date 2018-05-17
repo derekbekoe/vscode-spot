@@ -1,4 +1,4 @@
-import { window, Uri, workspace, TextDocumentWillSaveEvent, EventEmitter, Event, TextDocumentSaveReason } from 'vscode';
+import { window, Uri, workspace, TextDocumentWillSaveEvent, EventEmitter, Event, TextDocumentSaveReason, commands } from 'vscode';
 import { SpotSession, ensureDirectoryExistence, getWsProtocol } from './spotUtil';
 import { URL } from 'url';
 import { createHash } from 'crypto';
@@ -101,6 +101,7 @@ export class SpotFileTracker {
       const dirname = path.join(tmpobj.name, '_spot');
       rimraf.sync(dirname);
     }
+    commands.executeCommand('setContext', 'canShowSpotExplorer', false);
   }
 }
 
