@@ -1,5 +1,6 @@
 import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
 import * as dns from 'dns';
+import * as request from 'request-promise';
 import * as util from 'util';
 
 import { MessageItem, window, workspace } from 'vscode';
@@ -136,7 +137,9 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
     // Get the region at the beginning since we need to to validate the spot name DNS label.
     const spotRegion: string = workspace.getConfiguration('spot').get('azureRegion') || DEFAULT_SPOT_REGION;
     let spotName: string | undefined;
+    let imageName: string | undefined;
     let spotDNSLabelOk: boolean = false;
+    let spotImageNameOk: boolean = false;
     do {
         spotName = await window.showInputBox(
                 {placeHolder: 'Name of spot.',
@@ -151,20 +154,43 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
             await util.promisify(dns.lookup)(fullHostname);
             console.log('Spot DNS label check', `${fullHostname} appears taken. Try another.`);
             // tslint:disable-next-line:max-line-length
-            window.showWarningMessage(`Spot name ${spotName} in region ${spotRegion} is taken. Please enter a different name or try again later.`);
-            spotDNSLabelOk = false;
+            window.showWarningMessage(`Spot name ${spotName} in region ${spotRegion} is taken. Please enter a different name or try again later.`, {modal: true});
         } catch (err) {
             console.log('Spot DNS label check OK', err.message);
             // DNS label available or failed to check so continue.
             spotDNSLabelOk = true;
         }
     } while (!spotDNSLabelOk);
-    const imageName: string | undefined = await window.showInputBox({
-        placeHolder: 'Container image name (e.g. ubuntu:xenial)',
-        ignoreFocusOut: true});
-    if (!imageName) {
-        throw new UserCancelledError('No container image name specified. Operation cancelled.');
-    }
+    do {
+        imageName = await window.showInputBox({
+            placeHolder: 'Container image name (e.g. ubuntu:xenial)',
+            ignoreFocusOut: true});
+        if (!imageName) {
+            throw new UserCancelledError('No container image name specified. Operation cancelled.');
+        }
+        let dockerhubRepo: string;
+        let dockerhubTag: string;
+        const posOfColon: number = imageName.indexOf(':');
+        if (posOfColon === -1) {
+            dockerhubRepo = imageName;
+            dockerhubTag = 'latest';
+        } else {
+            dockerhubRepo = imageName.substring(0, posOfColon);
+            dockerhubTag = imageName.substring(posOfColon + 1);
+        }
+        // tslint:disable-next-line:max-line-length
+        const reqUri: string = `https://index.docker.io/v1/repositories/${dockerhubRepo}/tags/${dockerhubTag}`;
+        console.log(`Making request to ${reqUri}`);
+        const response = await request({uri: reqUri, method: 'GET', simple: false, resolveWithFullResponse: true});
+        console.log(`Got ${response.statusCode} from ${reqUri}`, response);
+        if (response.statusCode === 404) {
+            // tslint:disable-next-line:max-line-length
+            window.showWarningMessage(`The image ${imageName} is not available on Docker Hub. Please enter a different image name.`, {modal: true});
+        } else {
+            // If there is another other error other than a clear 404, be optimistic and continue.
+            spotImageNameOk = true;
+        }
+    } while (!spotImageNameOk);
     const spotConfig: SpotSetupConfig = await getSpotSetupConfig(azureSub);
     const deploymentName: string = getDeploymentName();
     const deploymentConfig: IDeploymentTemplateConfig = await configureDeploymentTemplate(spotName,
