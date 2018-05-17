@@ -103,7 +103,27 @@ export async function configureDeploymentTemplate(
 }
 
 function validateSpotName(val: string) {
-    return !val.includes(' ') ? null : 'Name cannot contain spaces';
+    /* Do client-side validation on the name since ACI will reject it at deploy time anyway.
+       The current error from ACI is something like this so we check these client-side:
+       "It can contain only lowercase letters, numbers and hyphens.
+       The first character must be a letter. The last character must be a letter or number.
+       The value must be between 5 and 63 characters long." */
+    if (val.length < 5 || val.length > 63) {
+        return 'Length of name must be between 5 and 63 characters long';
+    }
+    if (val.match(/[^a-z\d\-]/g)) {
+        return 'Name can contain only lowercase letters, numbers and hyphens';
+    }
+    if (val !== val.toLowerCase()) {
+        return 'Upper case characters not allowed';
+    }
+    if (!val.charAt(0).match(/[a-z]/i)) {
+        return 'The first character must be a letter';
+    }
+    if (!val.charAt(val.length - 1).match(/[a-z\d]/i)) {
+        return 'The last character must be a letter or number';
+    }
+    return null;
 }
 
 export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCreationData> {
