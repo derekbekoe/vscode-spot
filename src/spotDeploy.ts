@@ -1,4 +1,5 @@
-export var deploymentTemplateBase = {
+// tslint:disable:object-literal-key-quotes
+export const deploymentTemplateBase = {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {},
@@ -94,7 +95,7 @@ export var deploymentTemplateBase = {
     "outputs": {}
   };
 
-export var userContainer = {
+export const userContainer = {
   "name": "[variables('container1name')]",
   "properties": {
     "image": "[variables('container1image')]",
@@ -176,10 +177,9 @@ export var userContainer = {
       }
     ]
   }
-}
+};
 
-
-export var certbotContainer = {
+export const certbotContainer = {
   "name": "[variables('container2name')]",
   "properties": {
     "image": "[variables('container2image')]",
@@ -222,4 +222,4 @@ export var certbotContainer = {
       }
     ]
   }
-}
+};

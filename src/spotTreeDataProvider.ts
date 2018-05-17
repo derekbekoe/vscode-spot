@@ -1,39 +1,40 @@
 import * as vscode from "vscode";
-import { SpotFileTracker, SpotFile } from "./spotFiles";
+import { SpotFile, SpotFileTracker } from "./spotFiles";
 
-export enum TNodeKind { NODE_FILE, NODE_FOLDER };
+export enum TNodeKind { NODE_FILE, NODE_FOLDER }
 
+/* tslint:disable:max-classes-per-file member-ordering */
 
 export class SpotTreeDataProvider implements vscode.TreeDataProvider<TNode> {
 
+  // tslint:disable-next-line:variable-name
   private _onDidChangeTreeData: vscode.EventEmitter<TNode | undefined> = new vscode.EventEmitter<TNode | undefined>();
-  readonly onDidChangeTreeData: vscode.Event<TNode | undefined> = this._onDidChangeTreeData.event;
+  public readonly onDidChangeTreeData: vscode.Event<TNode | undefined> = this._onDidChangeTreeData.event;
 
   constructor(private fileTracker: SpotFileTracker) {
-    fileTracker.onFilesChanged(files => {
+    fileTracker.onFilesChanged((files) => {
       this._onDidChangeTreeData.fire();
     });
 
   }
 
-  getTreeItem(element: TNode): vscode.TreeItem {
+  public getTreeItem(element: TNode): vscode.TreeItem {
     return element;
   }
 
-  getChildren(element?: TNode): Thenable<TNode[]> {
-    return new Promise(resolve => {
-      let ll: TNode[] = [];
-      let sp_map: Map<string, SpotFile>;
-      sp_map = element ? element.spotFile.children : this.fileTracker.files;
-      for (let f of sp_map.keys()) {
-        var v: SpotFile | undefined = sp_map.get(f);
+  public getChildren(element?: TNode): Thenable<TNode[]> {
+    return new Promise((resolve) => {
+      const ll: TNode[] = [];
+      const spMap: Map<string, SpotFile> = element ? element.spotFile.children : this.fileTracker.files;
+      for (const f of spMap.keys()) {
+        const v: SpotFile | undefined = spMap.get(f);
         if (v) {
-          var bn_command = v.isDirectory ? undefined : {
+          const bnCommand = v.isDirectory ? undefined : {
               command: "spot.OpenFileEditor",
               title: f,
               arguments: [v.path, v.spotSession],
           };
-          let bn: TNode = new TNode(f, v.isDirectory ? TNodeKind.NODE_FOLDER : TNodeKind.NODE_FILE, v, bn_command);
+          const bn: TNode = new TNode(f, v.isDirectory ? TNodeKind.NODE_FOLDER : TNodeKind.NODE_FILE, v, bnCommand);
           ll.push(bn);
         }
       }
@@ -50,6 +51,7 @@ class TNode extends vscode.TreeItem {
     public readonly spotFile: SpotFile,
     public readonly command?: vscode.Command
   ) {
+    // tslint:disable-next-line:max-line-length
     super(label, (kind === TNodeKind.NODE_FILE) ? vscode.TreeItemCollapsibleState.None : vscode.TreeItemCollapsibleState.Collapsed);
     this.contextValue = (kind === TNodeKind.NODE_FILE) ? "NodeFile" : "NodeFolder";
   }

@@ -1,13 +1,14 @@
-import { window, workspace, MessageItem } from 'vscode';
+import * as fs from 'fs';
 import * as request from 'request';
 import * as tmp from 'tmp';
-import * as fs from 'fs';
+import { MessageItem, window, workspace } from 'vscode';
+
 import { ResourceManagementClient } from 'azure-arm-resource';
 import StorageManagementClient = require('azure-arm-storage');
 import { FileService } from 'azure-storage';
 import { AzureSubscription } from './azure-account.api';
 import { randomBytes } from './ipc';
-import { SpotSetupError } from './spotUtil'
+import { SpotSetupError } from './spotUtil';
 
 export const DEFAULT_RG_NAME = 'vscode-spot';
 
@@ -20,10 +21,10 @@ const URL_SPOT_CERTBOT = `https://github.com/derekbekoe/spot/releases/download/$
 
 export class SpotSetupConfig {
     constructor(public resourceGroupName: string,
-        public azureFileShareName1: string,
-        public azureFileShareName2: string,
-        public azureStorageAccountName: string,
-        public azureStorageAccountKey: string){}
+                public azureFileShareName1: string,
+                public azureFileShareName2: string,
+                public azureStorageAccountName: string,
+                public azureStorageAccountKey: string) {}
 }
 
 function handleStorageDataPlane<T>(fileService: FileService, func: any, ...args: any[]): Promise<T> {
@@ -34,26 +35,25 @@ function handleStorageDataPlane<T>(fileService: FileService, func: any, ...args:
             resolve(res);
         }
     }));
-    ;
 }
 
 async function downloadFileToTmp(uri: string): Promise<string> {
-    let tmpFile = tmp.fileSync();
+    const tmpFile = tmp.fileSync();
     const dest = tmpFile.name;
-    let file = fs.createWriteStream(dest);
+    const file = fs.createWriteStream(dest);
     return new Promise<string>((resolve, reject) => {
         request(uri)
         .on('error', (e) => {
             console.error('Download temp file error', e);
             reject();
         })
-        .on('end', function () {
+        .on('end', () => {
             console.log('Downloaded', uri, dest);
             resolve(dest);
         })
         .pipe(file);
     });
-};
+}
 
 export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<SpotSetupConfig> {
     let resourceGroupName = workspace.getConfiguration('spot').get<string>('azureResourceGroup');
@@ -62,7 +62,8 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
     let azureStorageAccountKey = workspace.getConfiguration('spot').get<string>('azureStorageAccountKey');
     if (resourceGroupName) {
         if (azureFileShareName1 && azureStorageAccountName && azureStorageAccountKey) {
-            let azureFileShareName2 = workspace.getConfiguration('spot').get<string>('azureFileShareName2') || azureFileShareName1;
+            // tslint:disable-next-line:max-line-length no-shadowed-variable
+            const azureFileShareName2 = workspace.getConfiguration('spot').get<string>('azureFileShareName2') || azureFileShareName1;
             console.log('Using custom spot setup configuration');
             return new SpotSetupConfig(resourceGroupName, azureFileShareName1, azureFileShareName2,
                                        azureStorageAccountName, azureStorageAccountKey);
@@ -77,33 +78,37 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
     if (!await rmClient.resourceGroups.checkExistence(resourceGroupName)) {
         const okMsgItem: MessageItem = {title: 'Ok'};
         const cancelMsgItem: MessageItem = {title: 'Cancel'};
+        // tslint:disable-next-line:max-line-length
         const msgItem: MessageItem | undefined = await window.showWarningMessage(`To set things up, we are going to create a resource group named ${resourceGroupName} and provision a storage account.`, okMsgItem, cancelMsgItem);
         if (msgItem === cancelMsgItem || msgItem === undefined) {
             throw new SpotSetupError('Cancelled set up.');
         }
         await rmClient.resourceGroups.createOrUpdate(resourceGroupName, {location: 'westus'});
         console.log(`Created resource group ${resourceGroupName}`);
-        let newStName = 'spot' + (await randomBytes(10)).toString('hex').toLowerCase().substring(0, 18)
+        let newStName = 'spot' + (await randomBytes(10)).toString('hex').toLowerCase().substring(0, 18);
         let stNameAvailable = false;
-        for (let i=0; i<10 && !stNameAvailable; i++) {
+        for (let i = 0; i < 10 && !stNameAvailable; i++) {
             console.log(`Proposed storage account: ${newStName}`);
             if ((await stClient.storageAccounts.checkNameAvailability(newStName)).nameAvailable) {
                 stNameAvailable = true;
                 break;
             } else {
                 console.log(`${newStName} is unavailable.`);
-                newStName = 'spot' + (await randomBytes(10)).toString('hex').toLowerCase().substring(0, 18)
+                newStName = 'spot' + (await randomBytes(10)).toString('hex').toLowerCase().substring(0, 18);
             }
         }
         if (!stNameAvailable) {
-            let errMsg = 'Unable to get a unique storage account name.';
+            const errMsg = 'Unable to get a unique storage account name.';
             console.log(errMsg);
             await rmClient.resourceGroups.deleteMethod(resourceGroupName);
             throw new SpotSetupError(`${errMsg} Please try again.`);
         }
         azureStorageAccountName = newStName;
         console.log(`Found unique storage account name of '${azureStorageAccountName}'. Creating storage account...`);
-        await stClient.storageAccounts.create(resourceGroupName, azureStorageAccountName, {'sku': {'name': 'Standard_LRS'}, 'kind': 'Storage', 'location': 'westus'});
+        await stClient.storageAccounts.create(resourceGroupName,
+                                              azureStorageAccountName,
+                                              {sku: {name: 'Standard_LRS'},
+                                               kind: 'Storage', location: 'westus'});
         console.log('Created storage account successfully.');
         const stKeysResult = await stClient.storageAccounts.listKeys(resourceGroupName, azureStorageAccountName);
         if (stKeysResult === undefined || stKeysResult.keys === undefined) {
@@ -114,17 +119,34 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
         azureStorageAccountKey = stKeysResult.keys[0].value;
         const fileService = new FileService(azureStorageAccountName, azureStorageAccountKey);
         azureFileShareName1 = DEFAULT_SHARE_NAME;
-        console.log(`Creating share in storage account '${azureStorageAccountName}' with name '${azureFileShareName1}'`);
-        await handleStorageDataPlane<FileService.ShareResult>(fileService, FileService.prototype.createShareIfNotExists, azureFileShareName1);
+        console.log(`Creating share in storage account '${azureStorageAccountName}', name '${azureFileShareName1}'`);
+        await handleStorageDataPlane<FileService.ShareResult>(fileService,
+                                                              FileService.prototype.createShareIfNotExists,
+                                                              azureFileShareName1);
         console.log('Created share successfully.');
         console.log('Downloading spot host resources.');
-        let tmpSpotHost: string = await downloadFileToTmp(URL_SPOT_HOST);
-        let tmpSpotHostPtyNode: string = await downloadFileToTmp(URL_SPOT_HOST_PTY);
-        let tmpSpotCertbot: string = await downloadFileToTmp(URL_SPOT_CERTBOT);
+        const tmpSpotHost: string = await downloadFileToTmp(URL_SPOT_HOST);
+        const tmpSpotHostPtyNode: string = await downloadFileToTmp(URL_SPOT_HOST_PTY);
+        const tmpSpotCertbot: string = await downloadFileToTmp(URL_SPOT_CERTBOT);
         console.log('Uploading spot host resources.');
-        await handleStorageDataPlane<FileService.FileResult>(fileService, FileService.prototype.createFileFromLocalFile, azureFileShareName1, '', 'spot-host', tmpSpotHost);
-        await handleStorageDataPlane<FileService.FileResult>(fileService, FileService.prototype.createFileFromLocalFile, azureFileShareName1, '', 'pty.node', tmpSpotHostPtyNode);
-        await handleStorageDataPlane<FileService.FileResult>(fileService, FileService.prototype.createFileFromLocalFile, azureFileShareName1, '', 'certbot.sh', tmpSpotCertbot);
+        await handleStorageDataPlane<FileService.FileResult>(fileService,
+                                                             FileService.prototype.createFileFromLocalFile,
+                                                             azureFileShareName1,
+                                                             '',
+                                                             'spot-host',
+                                                             tmpSpotHost);
+        await handleStorageDataPlane<FileService.FileResult>(fileService,
+                                                             FileService.prototype.createFileFromLocalFile,
+                                                             azureFileShareName1,
+                                                             '',
+                                                             'pty.node',
+                                                             tmpSpotHostPtyNode);
+        await handleStorageDataPlane<FileService.FileResult>(fileService,
+                                                             FileService.prototype.createFileFromLocalFile,
+                                                             azureFileShareName1,
+                                                             '',
+                                                             'certbot.sh',
+                                                             tmpSpotCertbot);
         window.showInformationMessage(`Set up completed successfully...`);
     } else {
         console.log(`Resource group '${resourceGroupName}' exists so using that.`);
@@ -142,16 +164,29 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
         azureStorageAccountKey = stKeysResult.keys[0].value;
         const fileService = new FileService(azureStorageAccountName, azureStorageAccountKey);
         azureFileShareName1 = DEFAULT_SHARE_NAME;
-        let shareResult = await handleStorageDataPlane<FileService.ShareResult>(fileService, FileService.prototype.doesShareExist, azureFileShareName1);
+        const shareResult = await handleStorageDataPlane<FileService.ShareResult>(fileService,
+                                                                                FileService.prototype.doesShareExist,
+                                                                                azureFileShareName1);
         if (!shareResult.exists) {
-            console.log(`The share ${azureFileShareName1} does not exist in storage account ${azureStorageAccountName}`);
+            console.log(`Share ${azureFileShareName1} does not exist in storage account ${azureStorageAccountName}`);
             throw new SpotSetupError(`Please delete the '${resourceGroupName}' resource group and try again.`);
         }
-        if (!(await handleStorageDataPlane<FileService.FileResult>(fileService, FileService.prototype.doesFileExist, azureFileShareName1, '', 'spot-host')).exists ||
-            !(await handleStorageDataPlane<FileService.FileResult>(fileService, FileService.prototype.doesFileExist, azureFileShareName1, '', 'pty.node')).exists ||
-            !(await handleStorageDataPlane<FileService.FileResult>(fileService, FileService.prototype.doesFileExist, azureFileShareName1, '', 'certbot.sh')).exists) {
+        if (!(await handleStorageDataPlane<FileService.FileResult>(fileService,
+                                                                   FileService.prototype.doesFileExist,
+                                                                   azureFileShareName1,
+                                                                   '', 'spot-host')).exists ||
+            !(await handleStorageDataPlane<FileService.FileResult>(fileService,
+                                                                   FileService.prototype.doesFileExist,
+                                                                   azureFileShareName1,
+                                                                   '', 'pty.node')).exists ||
+            !(await handleStorageDataPlane<FileService.FileResult>(fileService,
+                                                                   FileService.prototype.doesFileExist,
+                                                                   azureFileShareName1,
+                                                                   '', 'certbot.sh')).exists) {
+            // tslint:disable-next-line:max-line-length
             const errMsg: string = `The share ${azureFileShareName1} in storage account ${azureStorageAccountName} does not contain the required files`;
             console.log(errMsg);
+            // tslint:disable-next-line:max-line-length
             throw new SpotSetupError(`${errMsg}. Please delete the '${resourceGroupName}' resource group and try again.`);
         }
     }
