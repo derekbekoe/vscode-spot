@@ -1,15 +1,13 @@
-import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem, workspace } from 'vscode';
+import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem } from 'vscode';
 import { TelemetryReporter, TelemetryResult } from './telemetry';
 import opn = require('opn');
 import { URL } from 'url';
 import { AzureAccount, AzureSubscription } from './azure-account.api';
-import { ResourceManagementClient } from 'azure-arm-resource';
 
 import { createTelemetryReporter } from './telemetry';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { SpotFileTracker, openFileEditor } from './spotFiles';
 import { KnownSpots, SpotSession, SpotSetupError, UserCancelledError } from './spotUtil';
-import { DEFAULT_RG_NAME } from './spotSetup';
 import { spotCreate, ISpotCreationData, CreationHealthCheckError, SpotDeploymentError } from './spotCreate';
 import { spotConnect, WindowsRequireNodeError } from './spotConnect';
 import { spotDisconnect } from './spotDisconnect';
