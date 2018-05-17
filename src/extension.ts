@@ -1,17 +1,18 @@
-import { window, Extension, ExtensionContext, extensions, commands, StatusBarAlignment, StatusBarItem, MessageItem } from 'vscode';
-import { TelemetryReporter, TelemetryResult } from './telemetry';
 import opn = require('opn');
 import { URL } from 'url';
-import { AzureAccount, AzureSubscription } from './azure-account.api';
+import { commands, Extension, ExtensionContext, extensions, MessageItem,
+         StatusBarAlignment, StatusBarItem, window } from 'vscode';
 
-import { createTelemetryReporter } from './telemetry';
-import { SpotTreeDataProvider } from './spotTreeDataProvider';
-import { SpotFileTracker, openFileEditor } from './spotFiles';
-import { KnownSpots, SpotSession, SpotSetupError, UserCancelledError } from './spotUtil';
-import { spotCreate, ISpotCreationData, CreationHealthCheckError, SpotDeploymentError } from './spotCreate';
+import { AzureAccount, AzureSubscription } from './azure-account.api';
 import { spotConnect, WindowsRequireNodeError } from './spotConnect';
+import { CreationHealthCheckError, ISpotCreationData, spotCreate, SpotDeploymentError } from './spotCreate';
 import { spotDisconnect } from './spotDisconnect';
-import { spotTerminate, MissingConfigVariablesError, ACIDeleteError } from './spotTerminate';
+import { openFileEditor, SpotFileTracker } from './spotFiles';
+import { ACIDeleteError, MissingConfigVariablesError, spotTerminate } from './spotTerminate';
+import { SpotTreeDataProvider } from './spotTreeDataProvider';
+import { KnownSpots, SpotSession, SpotSetupError, UserCancelledError } from './spotUtil';
+import { TelemetryReporter, TelemetryResult } from './telemetry';
+import { createTelemetryReporter } from './telemetry';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -27,6 +28,7 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(statusBarItem);
     spotFileTracker = new SpotFileTracker();
     knownSpots = new KnownSpots();
+    // tslint:disable-next-line:max-line-length
     const azureAccountExtension: Extension<AzureAccount> | undefined = extensions.getExtension<AzureAccount>('ms-vscode.azure-account');
     azureAccount = azureAccountExtension ? azureAccountExtension.exports : undefined;
     spotTreeDataProvider = new SpotTreeDataProvider(spotFileTracker);
@@ -68,7 +70,10 @@ function getAzureSubscription(): AzureSubscription | undefined {
         return;
     }
     const candidateSubscriptions = azureAccount.filters.filter((sub: AzureSubscription) => {
-        if (sub.subscription.id === undefined || sub.subscription.displayName === undefined || sub.subscription.subscriptionId === undefined || sub.subscription.state !== 'Enabled') {
+        if (sub.subscription.id === undefined ||
+            sub.subscription.displayName === undefined ||
+            sub.subscription.subscriptionId === undefined ||
+            sub.subscription.state !== 'Enabled') {
             return false;
         }
         return true;
@@ -80,7 +85,6 @@ function getAzureSubscription(): AzureSubscription | undefined {
     }
     return candidateSubscriptions[0];
 }
-
 
 function cmdSpotCreate() {
     reporter.sendTelemetryEvent('onCommand/spotCreate');
@@ -123,9 +127,11 @@ function cmdSpotCreate() {
                                             'spot.detail.imageName': ex.spotCreationData.imageName,
                                             'spot.detail.spotRegion': ex.spotCreationData.spotRegion});
             const portalMsgItem: MessageItem = {title: 'Azure Portal'};
+            // tslint:disable-next-line:max-line-length
             window.showErrorMessage(`Spot health check failed for ${ex.spotCreationData.spotName}: Check the container logs in the Portal.`, portalMsgItem)
             .then((msgItem: MessageItem | undefined) => {
                 if (portalMsgItem === msgItem) {
+                    // tslint:disable-next-line:max-line-length
                     opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
                 }
             });
@@ -133,13 +139,14 @@ function cmdSpotCreate() {
             console.error(ex.message);
             const moreInfoItem: MessageItem = {title: 'More Info'};
             const portalMsgItem: MessageItem = {title: 'Azure Portal'};
-            window.showErrorMessage(`Unable to complete the set up. ${ex.message}`, moreInfoItem, portalMsgItem).then((msgItem: MessageItem | undefined) => {
+            window.showErrorMessage(`Unable to complete the set up. ${ex.message}`, moreInfoItem, portalMsgItem)
+            .then((msgItem: MessageItem | undefined) => {
                 if (msgItem === moreInfoItem) {
                     opn('https://github.com/derekbekoe/vscode-spot#configuration');
                 } else if (msgItem === portalMsgItem) {
                     opn('https://portal.azure.com/');
                 }
-            }, (err: any) => {});
+            });
             reporter.sendTelemetryEvent('spotCreate/conclude',
                                         {'spot.result': TelemetryResult.USER_RECOVERABLE,
                                         'spot.reason': 'MISSING_CONFIGURATION_VARIABLES'});
@@ -190,8 +197,10 @@ function connectToSpot(hostname: string, instanceToken: string) {
 
 function cmdSpotConnect() {
     reporter.sendTelemetryEvent('onCommand/spotConnect');
+    // tslint:disable-next-line:max-line-length
     const spotNamePrompt = Object.keys(knownSpots.getAll()).length > 0 ? `Known spots: ${Array.from(Object.keys(knownSpots.getAll()))}` : undefined;
-    window.showInputBox({placeHolder: 'Spot to connect to.', ignoreFocusOut: true, prompt: spotNamePrompt}).then((spotName) => {
+    window.showInputBox({placeHolder: 'Spot to connect to.', ignoreFocusOut: true, prompt: spotNamePrompt})
+    .then((spotName) => {
         if (!spotName) {
             return;
         }
@@ -203,12 +212,13 @@ function cmdSpotConnect() {
                 // If full URL provided, no need to ask for token
                 const spotURL = new URL(spotName);
                 const spotPort = spotURL.protocol.startsWith('https') ? '443' : '80';
-                var spotToken = spotName.substring(spotName.indexOf('?token=') + '?token='.length);
+                const spotToken = spotName.substring(spotName.indexOf('?token=') + '?token='.length);
                 spotName = `${spotURL.origin}:${spotPort}`;
                 connectToSpot(spotName, spotToken);
                 return;
             }
-            window.showInputBox({placeHolder: 'Token for the spot.', password: true, ignoreFocusOut: true}).then((spotToken) => {
+            window.showInputBox({placeHolder: 'Token for the spot.', password: true, ignoreFocusOut: true})
+            .then((spotToken) => {
                 if (spotToken) {
                     connectToSpot(spotName!, spotToken);
                 }
@@ -278,9 +288,11 @@ function terminateSpot() {
             reporter.sendTelemetryEvent('spotTerminate/conclude',
                     {'spot.result': TelemetryResult.USER_RECOVERABLE,
                         'spot.reason': 'ARM_RESOURCE_DELETE_FAILURE'});
+            // tslint:disable-next-line:max-line-length
             window.showErrorMessage('Unable to terminate spot. Open the Azure portal and delete the container group from there.', portalMsgItem)
             .then((msgItem: MessageItem | undefined) => {
                 if (portalMsgItem === msgItem) {
+                    // tslint:disable-next-line:max-line-length
                     opn('https://portal.azure.com/#blade/HubsExtension/Resources/resourceType/Microsoft.ContainerInstance%2FcontainerGroups');
                 }
             });

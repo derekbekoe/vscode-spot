@@ -1,16 +1,19 @@
-import { window, MessageItem, workspace } from 'vscode';
-import { getSpotSetupConfig, SpotSetupConfig } from './spotSetup';
+import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
+import { MessageItem, window, workspace } from 'vscode';
+
 import { AzureSubscription } from './azure-account.api';
 import { randomBytes } from './ipc';
-import { deploymentTemplateBase, certbotContainer, userContainer } from './spotDeploy';
-import { spotHealthCheck, UserCancelledError, HealthCheckError } from './spotUtil';
-import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
+import { certbotContainer, deploymentTemplateBase, userContainer } from './spotDeploy';
+import { getSpotSetupConfig, SpotSetupConfig } from './spotSetup';
+import { HealthCheckError, spotHealthCheck, UserCancelledError } from './spotUtil';
 
 const DEFAULT_SPOT_REGION = 'westus';
 const DEFAULT_SPOT_FILE_WATCHER_PATH = '/root';
 const DEPLOYMENT_NAME_PREFIX = 'spot-deployment';
 const SPOT_SSL_PORT = '443';
 const SPOT_NOSSL_PORT = '80';
+
+// tslint:disable:max-classes-per-file
 
 function getDeploymentName() {
     const date = new Date();
@@ -20,31 +23,32 @@ function getDeploymentName() {
     const dateHr = date.getUTCHours();
     const dateMin = date.getUTCMinutes();
     const dateSec = date.getUTCSeconds();
+    // tslint:disable-next-line:max-line-length
     const deploymentName: string = `${DEPLOYMENT_NAME_PREFIX}-${dateDay}-${dateMonth}-${dateYr}-${dateHr}-${dateMin}-${dateSec}`;
     return deploymentName;
 }
 
-export interface DeploymentTemplateConfig {
-    deploymentTemplate: object,
-    hostname: string,
-    instanceToken: string,
-    useSSL: boolean,
-    spotRegion: string
+export interface IDeploymentTemplateConfig {
+    deploymentTemplate: object;
+    hostname: string;
+    instanceToken: string;
+    useSSL: boolean;
+    spotRegion: string;
 }
 
 export interface ISpotCreationData {
-    useSSL: boolean,
-    spotName: string,
-    imageName: string,
-    spotRegion: string,
-    hostname: string,
-    instanceToken: string
+    useSSL: boolean;
+    spotName: string;
+    imageName: string;
+    spotRegion: string;
+    hostname: string;
+    instanceToken: string;
 }
 
 export class SpotDeploymentError extends Error {
     constructor(public message: string, public spotCreationData: ISpotCreationData) {
         super(message);
-    } 
+    }
 }
 
 export class CreationHealthCheckError extends HealthCheckError {
@@ -57,10 +61,10 @@ export async function configureDeploymentTemplate(
     spotName: string,
     imageName: string,
     azureSub: AzureSubscription,
-    spotConfig: SpotSetupConfig): Promise<DeploymentTemplateConfig> {
+    spotConfig: SpotSetupConfig): Promise<IDeploymentTemplateConfig> {
     const buffer: Buffer = await randomBytes(256);
     const instanceToken = buffer.toString('hex');
-    
+
     const spotRegion: string = workspace.getConfiguration('spot').get('azureRegion') || DEFAULT_SPOT_REGION;
     const deploymentTemplate = JSON.parse(JSON.stringify(deploymentTemplateBase));
     deploymentTemplate.variables.spotName = `${spotName}`;
@@ -75,8 +79,10 @@ export async function configureDeploymentTemplate(
     deploymentTemplate.variables.azureStorageAccountKey1 = spotConfig.azureStorageAccountKey;
     deploymentTemplate.variables.azureStorageAccountName2 = spotConfig.azureStorageAccountName;
     deploymentTemplate.variables.azureStorageAccountKey2 = spotConfig.azureStorageAccountKey;
+    // tslint:disable-next-line:max-line-length
     deploymentTemplate.variables.fileWatcherWatchPath = workspace.getConfiguration('spot').get('fileWatcherWatchPath') || DEFAULT_SPOT_FILE_WATCHER_PATH;
     const useSSL = workspace.getConfiguration('spot').get('createSpotWithSSLEnabled', false);
+    // tslint:disable-next-line:max-line-length
     const hostname: string = useSSL ? `https://${spotName}.${spotRegion}.azurecontainer.io:${SPOT_SSL_PORT}` : `http://${spotName}.${spotRegion}.azurecontainer.io:${SPOT_NOSSL_PORT}`;
     if (useSSL) {
         console.log('Spot will be created with SSL enabled.');
@@ -109,7 +115,7 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
     if (!spotName) {
         throw new UserCancelledError('No spot name specified. Operation cancelled.');
     }
-    const imageName : string | undefined = await window.showInputBox({
+    const imageName: string | undefined = await window.showInputBox({
         placeHolder: 'Container image name (e.g. ubuntu:xenial)',
         ignoreFocusOut: true});
     if (!imageName) {
@@ -117,7 +123,10 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
     }
     const spotConfig: SpotSetupConfig = await getSpotSetupConfig(azureSub);
     const deploymentName: string = getDeploymentName();
-    const deploymentConfig: DeploymentTemplateConfig = await configureDeploymentTemplate(spotName, imageName, azureSub, spotConfig);
+    const deploymentConfig: IDeploymentTemplateConfig = await configureDeploymentTemplate(spotName,
+                                                                                          imageName,
+                                                                                          azureSub,
+                                                                                          spotConfig);
     const deploymentOptions: ResourceModels.Deployment = {
         properties: { mode: 'Incremental', template: deploymentConfig.deploymentTemplate}
     };
@@ -153,8 +162,8 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
     window.showInformationMessage(`Running health check for ${spotName}`);
     try {
         await spotHealthCheck(deploymentConfig.hostname, deploymentConfig.instanceToken);
-    } catch(err) {
-        throw new CreationHealthCheckError(err, spotCreationData); 
+    } catch (err) {
+        throw new CreationHealthCheckError(err, spotCreationData);
     }
     return spotCreationData;
 }

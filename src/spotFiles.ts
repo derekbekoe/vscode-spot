@@ -1,95 +1,83 @@
-import { window, Uri, workspace, TextDocumentWillSaveEvent, EventEmitter, Event, TextDocumentSaveReason, commands } from 'vscode';
-import { SpotSession, ensureDirectoryExistence, getWsProtocol } from './spotUtil';
-import { URL } from 'url';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as WS from 'ws';
-import * as tmp from 'tmp';
 import * as rimraf from 'rimraf';
+import * as tmp from 'tmp';
+import { URL } from 'url';
+import { commands, Event, EventEmitter, TextDocumentSaveReason, TextDocumentWillSaveEvent, Uri, window,
+         workspace } from 'vscode';
+import * as WS from 'ws';
+
+import { ensureDirectoryExistence, getWsProtocol, SpotSession } from './spotUtil';
+
+/* tslint:disable:max-classes-per-file */
 
 export class SpotFile {
     constructor(public isDirectory: boolean,
+                // tslint:disable-next-line:no-shadowed-variable
                 public path: string,
                 public spotSession: SpotSession,
-                public children: Map<string, SpotFile>=new Map<string, SpotFile>()) {}
+                public children: Map<string, SpotFile> = new Map<string, SpotFile>()) {}
 }
 
 export class SpotFileTracker {
 
-  private ws: WS | undefined;
   public files: Map<string, SpotFile> = new Map<string, SpotFile>();
+  private ws: WS | undefined;
 
   private onFilesChangedEmitter = new EventEmitter<Map<string, SpotFile>>();
   get onFilesChanged(): Event<Map<string, SpotFile>> {return this.onFilesChangedEmitter.event; }
-
-  constructor(){}
-
-  private addFileOrDir(isDirectory: boolean, path: string, session: SpotSession) {
-    var new_node = new SpotFile(isDirectory, path, session);
-    const segments: string[] = path.split('/').slice(1);
-    var f_s = this.files;
-    for (let segment of segments) {
-      const segment_v = f_s.get(segment);
-      if (segment_v) {
-        f_s = segment_v.children;
-      } else {
-        f_s.set(segment, new_node);
-        f_s = new_node.children;
-      }
-    }
-  }
 
   public connect(session: SpotSession) {
     const url = new URL(session.hostname);
     const socketProtocol = getWsProtocol(url);
     const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/files/?token=${session.token}`;
-    var handledRootDir: boolean = false;
+    let handledRootDir: boolean = false;
     this.files = new Map<string, SpotFile>();
     this.onFilesChangedEmitter.fire(this.files);
     this.ws = new WS(socketUri);
-    this.ws.on('open', function () {
+    this.ws.on('open', () => {
       console.log('socket open');
       handledRootDir = false;
     });
-  
+
     this.ws.on('message', (data: string) => {
       console.log('socket data', data);
-      const obj_data = JSON.parse(data);
-      if (obj_data.event === 'addDir'  || obj_data.event === 'add') {
-        if (obj_data.event === 'addDir' && !handledRootDir) {
+      const objdata = JSON.parse(data);
+      if (objdata.event === 'addDir'  || objdata.event === 'add') {
+        if (objdata.event === 'addDir' && !handledRootDir) {
           handledRootDir = true;
-          var segments: string[] = obj_data.path.split('/');
-          for (var i=1; i<=segments.length; i++) {
-            var s: string = segments.slice(0, i).join('/');
+          const segments: string[] = objdata.path.split('/');
+          for (let i = 1; i <= segments.length; i++) {
+            const s: string = segments.slice(0, i).join('/');
             this.addFileOrDir(true, s, session);
           }
         } else {
-          this.addFileOrDir(obj_data.event === 'addDir', obj_data.path, session);
+          this.addFileOrDir(objdata.event === 'addDir', objdata.path, session);
         }
-      } else if (obj_data.event === 'unlinkDir' || obj_data.event === 'unlink') {
-        const segments: string[] = obj_data.path.split('/').slice(1);
-        var f_parent = this.files;
-        for (let i = 0; i < segments.length-1; i++) {
-          const segment_v = f_parent.get(segments[i]);
-          if (segment_v) {
-            f_parent = segment_v.children;
+      } else if (objdata.event === 'unlinkDir' || objdata.event === 'unlink') {
+        const segments: string[] = objdata.path.split('/').slice(1);
+        let fparent = this.files;
+        for (let i = 0; i < segments.length - 1; i++) {
+          const segmentv = fparent.get(segments[i]);
+          if (segmentv) {
+            fparent = segmentv.children;
           }
         }
-        f_parent.delete(segments[segments.length -1]);
+        fparent.delete(segments[segments.length - 1]);
       }
       this.onFilesChangedEmitter.fire(this.files);
     });
-    
-    this.ws.on('error', function (event) {
+
+    this.ws.on('error', (event) => {
       console.error('Socket error: ' + JSON.stringify(event));
     });
-    
-    this.ws.on('close', function () {
+
+    this.ws.on('close', () => {
       console.log('Socket closed');
     });
   }
-  
+
   public disconnect() {
     this.files = new Map<string, SpotFile>();
     this.onFilesChangedEmitter.fire(this.files);
@@ -103,9 +91,25 @@ export class SpotFileTracker {
     }
     commands.executeCommand('setContext', 'canShowSpotExplorer', false);
   }
+
+  // tslint:disable-next-line:no-shadowed-variable
+  private addFileOrDir(isDirectory: boolean, path: string, session: SpotSession) {
+    const newNode = new SpotFile(isDirectory, path, session);
+    const segments: string[] = path.split('/').slice(1);
+    let files = this.files;
+    for (const segment of segments) {
+      const segmentv = files.get(segment);
+      if (segmentv) {
+        files = segmentv.children;
+      } else {
+        files.set(segment, newNode);
+        files = newNode.children;
+      }
+    }
+  }
 }
 
-var tmpobj = tmp.dirSync();
+const tmpobj = tmp.dirSync();
 
 export function openFileEditor(documentPath: any, session: SpotSession) {
   const storagePath: string = tmpobj.name;
@@ -120,7 +124,7 @@ export function openFileEditor(documentPath: any, session: SpotSession) {
   const socketUri = `${socketProtocol}://${url.hostname}:${url.port}/file/${fileId}/?token=${session.token}`;
   const ws = new WS(socketUri);
   ws.on('open', () => {
-    var data = {'event': 'fileDownload', 'path': documentPath};
+    const data = {event: 'fileDownload', path: documentPath};
     ws!.send(JSON.stringify(data));
   });
   ws.on('message', (data: Buffer) => {
@@ -134,8 +138,8 @@ export function openFileEditor(documentPath: any, session: SpotSession) {
       if (err) {
         console.error("Error writing file", err);
       } else {
-        let uriDocBookmark: Uri = Uri.file(tmpPath);
-        workspace.openTextDocument(uriDocBookmark).then(doc => {
+        const uriDocBookmark: Uri = Uri.file(tmpPath);
+        workspace.openTextDocument(uriDocBookmark).then((doc) => {
             window.showTextDocument(doc);
         });
         workspace.onWillSaveTextDocument((e: TextDocumentWillSaveEvent) => {
