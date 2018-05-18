@@ -157,7 +157,7 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
             window.showWarningMessage(`Spot name ${spotName} in region ${spotRegion} is taken. Please enter a different name or try again later.`, {modal: true});
         } catch (err) {
             console.log('Spot DNS label check OK', err.message);
-            // DNS label available or failed to check so continue.
+            // DNS label available or failed to check so continue optimistically.
             spotDNSLabelOk = true;
         }
     } while (!spotDNSLabelOk);
