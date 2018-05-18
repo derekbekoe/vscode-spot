@@ -1,4 +1,8 @@
 import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
+import * as dns from 'dns';
+import * as request from 'request-promise';
+import * as util from 'util';
+
 import { MessageItem, window, workspace } from 'vscode';
 
 import { AzureSubscription } from './azure-account.api';
@@ -6,6 +10,9 @@ import { randomBytes } from './ipc';
 import { certbotContainer, deploymentTemplateBase, userContainer } from './spotDeploy';
 import { getSpotSetupConfig, SpotSetupConfig } from './spotSetup';
 import { HealthCheckError, spotHealthCheck, UserCancelledError } from './spotUtil';
+
+// tslint:disable-next-line:no-var-requires
+require('util.promisify').shim();
 
 const DEFAULT_SPOT_REGION = 'westus';
 const DEFAULT_SPOT_FILE_WATCHER_PATH = '/root';
@@ -60,12 +67,12 @@ export class CreationHealthCheckError extends HealthCheckError {
 export async function configureDeploymentTemplate(
     spotName: string,
     imageName: string,
+    spotRegion: string,
     azureSub: AzureSubscription,
     spotConfig: SpotSetupConfig): Promise<IDeploymentTemplateConfig> {
     const buffer: Buffer = await randomBytes(256);
     const instanceToken = buffer.toString('hex');
 
-    const spotRegion: string = workspace.getConfiguration('spot').get('azureRegion') || DEFAULT_SPOT_REGION;
     const deploymentTemplate = JSON.parse(JSON.stringify(deploymentTemplateBase));
     deploymentTemplate.variables.spotName = `${spotName}`;
     deploymentTemplate.variables.container1image = imageName;
@@ -103,28 +110,92 @@ export async function configureDeploymentTemplate(
 }
 
 function validateSpotName(val: string) {
-    return !val.includes(' ') ? null : 'Name cannot contain spaces';
+    /* Do client-side validation on the name since ACI will reject it at deploy time anyway.
+       The current error from ACI is something like this so we check these client-side:
+       "It can contain only lowercase letters, numbers and hyphens.
+       The first character must be a letter. The last character must be a letter or number.
+       The value must be between 5 and 63 characters long." */
+    if (val.length < 5 || val.length > 63) {
+        return 'Length of name must be between 5 and 63 characters long';
+    }
+    if (val.match(/[^a-z\d\-]/g)) {
+        return 'Name can contain only lowercase letters, numbers and hyphens';
+    }
+    if (val !== val.toLowerCase()) {
+        return 'Upper case characters not allowed';
+    }
+    if (!val.charAt(0).match(/[a-z]/i)) {
+        return 'The first character must be a letter';
+    }
+    if (!val.charAt(val.length - 1).match(/[a-z\d]/i)) {
+        return 'The last character must be a letter or number';
+    }
+    return null;
 }
 
 export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCreationData> {
-    const spotName: string | undefined = await window.showInputBox(
-            {placeHolder: 'Name of spot.',
-            ignoreFocusOut: true,
-            validateInput: validateSpotName
-        });
-    if (!spotName) {
-        throw new UserCancelledError('No spot name specified. Operation cancelled.');
-    }
-    const imageName: string | undefined = await window.showInputBox({
-        placeHolder: 'Container image name (e.g. ubuntu:xenial)',
-        ignoreFocusOut: true});
-    if (!imageName) {
-        throw new UserCancelledError('No container image name specified. Operation cancelled.');
-    }
+    // Get the region at the beginning since we need to to validate the spot name DNS label.
+    const spotRegion: string = workspace.getConfiguration('spot').get('azureRegion') || DEFAULT_SPOT_REGION;
+    let spotName: string | undefined;
+    let imageName: string | undefined;
+    let spotDNSLabelOk: boolean = false;
+    let spotImageNameOk: boolean = false;
+    do {
+        spotName = await window.showInputBox(
+                {placeHolder: 'Name of spot.',
+                ignoreFocusOut: true,
+                validateInput: validateSpotName
+            });
+        if (!spotName) {
+            throw new UserCancelledError('No spot name specified. Operation cancelled.');
+        }
+        try {
+            const fullHostname = `${spotName}.${spotRegion}.azurecontainer.io`;
+            await util.promisify(dns.lookup)(fullHostname);
+            console.log('Spot DNS label check', `${fullHostname} appears taken. Try another.`);
+            // tslint:disable-next-line:max-line-length
+            window.showWarningMessage(`Spot name ${spotName} in region ${spotRegion} is taken. Please enter a different name or try again later.`, {modal: true});
+        } catch (err) {
+            console.log('Spot DNS label check OK', err.message);
+            // DNS label available or failed to check so continue optimistically.
+            spotDNSLabelOk = true;
+        }
+    } while (!spotDNSLabelOk);
+    do {
+        imageName = await window.showInputBox({
+            placeHolder: 'Container image name (e.g. ubuntu:xenial)',
+            ignoreFocusOut: true});
+        if (!imageName) {
+            throw new UserCancelledError('No container image name specified. Operation cancelled.');
+        }
+        let dockerhubRepo: string;
+        let dockerhubTag: string;
+        const posOfColon: number = imageName.indexOf(':');
+        if (posOfColon === -1) {
+            dockerhubRepo = imageName;
+            dockerhubTag = 'latest';
+        } else {
+            dockerhubRepo = imageName.substring(0, posOfColon);
+            dockerhubTag = imageName.substring(posOfColon + 1);
+        }
+        // tslint:disable-next-line:max-line-length
+        const reqUri: string = `https://index.docker.io/v1/repositories/${dockerhubRepo}/tags/${dockerhubTag}`;
+        console.log(`Making request to ${reqUri}`);
+        const response = await request({uri: reqUri, method: 'GET', simple: false, resolveWithFullResponse: true});
+        console.log(`Got ${response.statusCode} from ${reqUri}`, response);
+        if (response.statusCode === 404) {
+            // tslint:disable-next-line:max-line-length
+            window.showWarningMessage(`The image ${imageName} is not available on Docker Hub. Please enter a different image name.`, {modal: true});
+        } else {
+            // If there is another other error other than a clear 404, be optimistic and continue.
+            spotImageNameOk = true;
+        }
+    } while (!spotImageNameOk);
     const spotConfig: SpotSetupConfig = await getSpotSetupConfig(azureSub);
     const deploymentName: string = getDeploymentName();
     const deploymentConfig: IDeploymentTemplateConfig = await configureDeploymentTemplate(spotName,
                                                                                           imageName,
+                                                                                          spotRegion,
                                                                                           azureSub,
                                                                                           spotConfig);
     const deploymentOptions: ResourceModels.Deployment = {
