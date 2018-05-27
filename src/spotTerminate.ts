@@ -16,11 +16,10 @@ export class MissingConfigVariablesError extends Error {}
 export class ACIDeleteError extends Error {}
 
 export async function spotTerminate(azureSub: AzureSubscription, knownSpots: KnownSpots): Promise<void> {
-    // tslint:disable-next-line:max-line-length
-    const spotNamePrompt = Object.keys(knownSpots.getAll()).length > 0 ? `Known spots: ${Array.from(Object.keys(knownSpots.getAll()))}` : undefined;
-    const spotName: string | undefined = await window.showInputBox({placeHolder: 'Name of spot to terminate/delete.',
-                                                                    ignoreFocusOut: true,
-                                                                    prompt: spotNamePrompt});
+    const knownSpotsKeys = Object.keys(knownSpots.getAll());
+    const spotName: string | undefined = await window.showQuickPick(Array.from(knownSpotsKeys),
+                                                                    {placeHolder: 'Name of spot to terminate/delete.',
+                                                                    ignoreFocusOut: true});
     if (!spotName) {
         throw new UserCancelledError('No spot name specified. Operation cancelled.');
     }
