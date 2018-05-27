@@ -104,13 +104,17 @@ function cmdSpotCreate() {
                                         'spot.detail.imageName': res.imageName,
                                         'spot.detail.spotRegion': res.spotRegion});
         knownSpots.add(res.spotName, res.hostname, res.instanceToken);
-        const connectItem: MessageItem = {title: 'Connect'};
-        window.showInformationMessage('Spot created successfully', connectItem)
-        .then((msgItem: MessageItem | undefined) => {
-            if (msgItem === connectItem) {
-                connectToSpot(res.hostname, res.instanceToken);
-            }
-        });
+        if (activeSession != null) {
+            window.showInformationMessage("Spot created successfully. Use 'Spot: Connect' to connect.");
+        } else {
+            const connectItem: MessageItem = {title: 'Connect'};
+            window.showInformationMessage('Spot created successfully.', connectItem)
+            .then((msgItem: MessageItem | undefined) => {
+                if (msgItem === connectItem) {
+                    connectToSpot(res.hostname, res.instanceToken);
+                }
+            });
+        }
     })
     .catch((ex) => {
         if (ex instanceof UserCancelledError) {
@@ -167,6 +171,10 @@ function cmdSpotCreate() {
 }
 
 function connectToSpot(hostname: string, instanceToken: string) {
+    if (activeSession != null) {
+        window.showWarningMessage('Already connected to a Spot.');
+        return;
+    }
     reporter.sendTelemetryEvent('spotConnect/initiate');
     spotConnect(hostname, instanceToken, spotFileTracker)
     .then((session: SpotSession) => {
