@@ -1,10 +1,15 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import * as requestretry from 'requestretry';
+import * as request from 'request';
 import { URL } from 'url';
+import * as util from 'util';
+import { window } from 'vscode';
 
 /* tslint:disable:max-classes-per-file */
+
+// tslint:disable-next-line:no-var-requires
+require('util.promisify').shim();
 
 export class SpotSetupError extends Error {}
 export class UserCancelledError extends Error {}
@@ -12,6 +17,10 @@ export class HealthCheckError extends Error {}
 
 export class SpotSession {
     constructor(public hostname: string, public token: string) {}
+}
+
+export async function delay(ms: number) {
+    return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 export function getWsProtocol(consoleUrl: URL) {
@@ -27,23 +36,33 @@ export function ensureDirectoryExistence(filePath: string) {
     fs.mkdirSync(dirname);
 }
 
-export function spotHealthCheck(hostname: string, instanceToken: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-        console.log(`Requesting health check from ${hostname}`);
-        requestretry({url: `${hostname}/health-check?token=${instanceToken}`,
-                      timeout: 60 * 1000,
-                      maxAttempts: 5,
-                      retryDelay: 5000},
-                      (err, res, body) => {
-                        if (err) {
-                            console.error('Spot health check failed', err);
-                            reject(err);
-                        } else {
-                            console.log('Health check successful.', body);
-                            resolve();
-                        }
-        });
-    });
+export async function spotHealthCheck(hostname: string, instanceToken: string): Promise<void> {
+    const secsBetweenAttempts = 4;
+    const maxAttempts = 90;
+    window.showInformationMessage('Running health check for spot');
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        console.log(`Requesting health check from ${hostname}. Attempt ${attempt}/${maxAttempts}.`);
+        try {
+            // tslint:disable-next-line:max-line-length
+            const resp: any = await util.promisify(request.get)({url: `${hostname}/health-check?token=${instanceToken}`},
+                                                                undefined);
+            console.log('Health check response', resp);
+            if (resp !== undefined) {
+                if (resp.statusCode === 200) {
+                    console.log('Health check successful.');
+                    return;
+                } else {
+                    throw new Error('Spot health check failed');
+                }
+            }
+        } catch (err) {
+            console.log('Health check response', err);
+        }
+        console.log(`Waiting ${secsBetweenAttempts} sec(s).`);
+        await delay(secsBetweenAttempts * 1000);
+    }
+    console.log('Health check timeout');
+    throw new Error('Spot health check failed');
 }
 
 class KnownSpotInfo {

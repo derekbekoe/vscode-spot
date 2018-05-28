@@ -130,9 +130,12 @@ function cmdSpotCreate() {
                                             'spot.detail.useSSL': String(ex.spotCreationData.useSSL),
                                             'spot.detail.imageName': ex.spotCreationData.imageName,
                                             'spot.detail.spotRegion': ex.spotCreationData.spotRegion});
+            knownSpots.add(ex.spotCreationData.spotName,
+                           ex.spotCreationData.hostname,
+                           ex.spotCreationData.instanceToken);
             const portalMsgItem: MessageItem = {title: 'Azure Portal'};
             // tslint:disable-next-line:max-line-length
-            window.showErrorMessage(`Spot health check failed for ${ex.spotCreationData.spotName}: Check the container logs in the Portal.`, portalMsgItem)
+            window.showErrorMessage(`Spot health check failed for ${ex.spotCreationData.spotName}. Use 'Spot: Connect' to connect later.`, portalMsgItem)
             .then((msgItem: MessageItem | undefined) => {
                 if (portalMsgItem === msgItem) {
                     // tslint:disable-next-line:max-line-length

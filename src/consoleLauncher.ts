@@ -4,11 +4,7 @@ import { URL } from 'url';
 import * as WS from 'ws';
 
 import { readJSON, sendData } from './ipc';
-import { getWsProtocol } from './spotUtil';
-
-async function delay(ms: number) {
-    return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
+import { delay, getWsProtocol } from './spotUtil';
 
 function getWindowSize() {
     const stdout: any = process.stdout;

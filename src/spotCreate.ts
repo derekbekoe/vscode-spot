@@ -230,7 +230,6 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
     } catch (err) {
         throw new SpotDeploymentError(err, spotCreationData);
     }
-    window.showInformationMessage(`Running health check for ${spotName}`);
     try {
         await spotHealthCheck(deploymentConfig.hostname, deploymentConfig.instanceToken);
     } catch (err) {
