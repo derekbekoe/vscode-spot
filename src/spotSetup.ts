@@ -3,6 +3,7 @@ import * as request from 'request';
 import * as tmp from 'tmp';
 import { MessageItem, window, workspace } from 'vscode';
 
+import { ContainerRegistryManagementClient, ContainerRegistryManagementModels } from 'azure-arm-containerregistry';
 import { ResourceManagementClient } from 'azure-arm-resource';
 import StorageManagementClient = require('azure-arm-storage');
 import { FileService } from 'azure-storage';
@@ -197,4 +198,65 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
     } else {
         throw new SpotSetupError(`Please delete the '${resourceGroupName}' resource group and try again.`);
     }
+}
+
+export interface IAcrSetupConfig {
+    registryName: string;
+    registryUser: string;
+    registryPass: string;
+    registryLoginServer: string;
+    registryGroup: string;
+}
+
+export async function getSpotAcrSetupConfig(azureSub: AzureSubscription,
+                                            sConfig: SpotSetupConfig): Promise<IAcrSetupConfig> {
+    const acrClient = new ContainerRegistryManagementClient(azureSub.session.credentials,
+        azureSub.subscription.subscriptionId!);
+    const registries = await acrClient.registries.listByResourceGroup(sConfig.resourceGroupName);
+    let spotRegistry: ContainerRegistryManagementModels.Registry;
+    if (registries.length === 0) {
+        // Create registry since it's not in this resource group
+        let newAcrName = 'spot' + (await randomBytes(10)).toString('hex').toLowerCase().substring(0, 18);
+        let nameAvailable = false;
+        for (let i = 0; i < 10 && !nameAvailable; i++) {
+            console.log(`Proposed ACR: ${newAcrName}`);
+            if (await acrClient.registries.checkNameAvailability({name: newAcrName})) {
+                nameAvailable = true;
+                break;
+            } else {
+                console.log(`${newAcrName} is unavailable.`);
+                newAcrName = 'spot' + (await randomBytes(10)).toString('hex').toLowerCase().substring(0, 18);
+            }
+        }
+        if (!newAcrName) {
+            const errMsg = 'Unable to get a unique container registry name.';
+            console.log(errMsg);
+            throw new SpotSetupError(`${errMsg} Please try again.`);
+        }
+        console.log(`Found unique container registry name of '${newAcrName}'. Creating container registry...`);
+        const okMsgItem: MessageItem = {title: 'Ok'};
+        const cancelMsgItem: MessageItem = {title: 'Cancel'};
+        // tslint:disable-next-line:max-line-length
+        const msgItem: MessageItem | undefined = await window.showWarningMessage(`To set things up, we are going to provision a container registry named ${newAcrName} in the resource group ${sConfig.resourceGroupName}.`, okMsgItem, cancelMsgItem);
+        if (msgItem === cancelMsgItem || msgItem === undefined) {
+            throw new SpotSetupError('Cancelled set up.');
+        }
+        // For now, go with westus2 but we shouldn't hard-code this in the future.
+        spotRegistry = await acrClient.registries.create(sConfig.resourceGroupName, newAcrName,
+                                                         {location: 'westus2', sku: {name: 'Standard'},
+                                                         adminUserEnabled: true});
+    } else if (registries.length === 1) {
+        spotRegistry = registries[0];
+    } else {
+        console.log(`Expected only 1 ACR registry. Found ${registries.length}`);
+        throw new SpotSetupError(`Please delete the '${sConfig.resourceGroupName}' resource group and try again.`);
+    }
+    const regCreds = await acrClient.registries.listCredentials(sConfig.resourceGroupName, spotRegistry.name!);
+    return {
+        registryName: spotRegistry.name!,
+        registryGroup: sConfig.resourceGroupName,
+        registryLoginServer: spotRegistry.loginServer!,
+        registryUser: regCreds.username!,
+        registryPass: regCreds.passwords![0].value!
+    };
 }

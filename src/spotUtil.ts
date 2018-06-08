@@ -1,14 +1,10 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import * as request from 'request';
+import * as request from 'request-promise';
 import { URL } from 'url';
-import * as util from 'util';
 
 /* tslint:disable:max-classes-per-file */
-
-// tslint:disable-next-line:no-var-requires
-require('util.promisify').shim();
 
 export class SpotSetupError extends Error {}
 export class UserCancelledError extends Error {}
@@ -36,16 +32,14 @@ export function ensureDirectoryExistence(filePath: string) {
 }
 
 export async function spotHealthCheck(hostname: string, instanceToken: string): Promise<void> {
-    const secsBetweenAttempts = 1;
-    const maxAttempts = 10;
+    const secsBetweenAttempts = 4;
+    const maxAttempts = 50;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         console.log(`Requesting health check from ${hostname}. Attempt ${attempt}/${maxAttempts}.`);
         try {
-            // tslint:disable-next-line:max-line-length
             const checkUrl: string = `${hostname}/health-check?token=${instanceToken}`;
             console.log('Health check to ', checkUrl);
-            const resp: any = await util.promisify(request.get)({url: checkUrl},
-                                                                undefined);
+            const resp: any = await request.get(checkUrl, {resolveWithFullResponse: true});
             console.log('Health check response', resp);
             if (resp !== undefined) {
                 if (resp.statusCode === 200) {
