@@ -16,18 +16,18 @@ script:
 before_deploy:
 - ./node_modules/.bin/vsce package
 deploy:
-  provider: releases
-  api_key:
-    secure: lyw7X6Ooor2NiQLmVQ1jlgYQt7vRdXib/s3oZfHq6wGEtnkwyBkNU2l4ZKUGnv4y4y2BuYrB91e/sgxclsOUtnGCrMr+GDYPHDq5WOdlUbRMITZRak0SqXeCUvU8S/yqo5c57zX97G0xhhnJD5xdz7Ru8S6VV8nH0DqyBnf/R0PUtQXe3TbHbRqTvmX3Qnk9uEAaatiZ9XxlP2ZxEIFtG7KT7VU1ir+Qyr+jdhycp8MyNo1e2yiJbTdhobUDeEV/kjXymiV+KMS/NipOs5mjNlLVWaoFbNTBFz9YvSAdcS01Br9aC73ke6w+gSGh7pmIdrMQVeMKWv41JQwIbDqcE8s9gqFR7EUlHJSFIjB0CeGW8icczQXoTyQqRbqBHV8CQZxdFvauUOQXgDJfkCnZpiE5wgJcX6I4vctBAnXcKvj0uqNmann5d9ywVXZVPW6MpWHB0EKnGK4/HkwJ0cV9pWizos7UxL673klklrQV/1sr37VYNqvyuNmdVseuKC67jAWhisddydCICbguw/QVDdMQ7f7c5dHe8Q8YZM+aGezEcJOpu2ZnYbLxRKfyywLCMoSONMnLQ2tVlR3PbC0UZJROEe327q2YXn9BAMgpAajaoENDmXdVQsmDU63Iuw/tB4auoKUh+OY7chcBChTG/3aOpi2H6T8S1Tf9K07tOmw=
-  file_glov: true
-  file: "*.vsix"
-  skip_cleanup: true
-  on:
-    repo: derekbekoe/vscode-spot
-    tags: true
-- provider: script
-  script: ./node_modules/.bin/vsce publish -p $VSCE_TOKEN
-  skip_cleanup: true
-  on:
-    repo: derekbekoe/vscode-spot
-    tags: true
+  - provider: releases
+    api_key:
+      secure: lyw7X6Ooor2NiQLmVQ1jlgYQt7vRdXib/s3oZfHq6wGEtnkwyBkNU2l4ZKUGnv4y4y2BuYrB91e/sgxclsOUtnGCrMr+GDYPHDq5WOdlUbRMITZRak0SqXeCUvU8S/yqo5c57zX97G0xhhnJD5xdz7Ru8S6VV8nH0DqyBnf/R0PUtQXe3TbHbRqTvmX3Qnk9uEAaatiZ9XxlP2ZxEIFtG7KT7VU1ir+Qyr+jdhycp8MyNo1e2yiJbTdhobUDeEV/kjXymiV+KMS/NipOs5mjNlLVWaoFbNTBFz9YvSAdcS01Br9aC73ke6w+gSGh7pmIdrMQVeMKWv41JQwIbDqcE8s9gqFR7EUlHJSFIjB0CeGW8icczQXoTyQqRbqBHV8CQZxdFvauUOQXgDJfkCnZpiE5wgJcX6I4vctBAnXcKvj0uqNmann5d9ywVXZVPW6MpWHB0EKnGK4/HkwJ0cV9pWizos7UxL673klklrQV/1sr37VYNqvyuNmdVseuKC67jAWhisddydCICbguw/QVDdMQ7f7c5dHe8Q8YZM+aGezEcJOpu2ZnYbLxRKfyywLCMoSONMnLQ2tVlR3PbC0UZJROEe327q2YXn9BAMgpAajaoENDmXdVQsmDU63Iuw/tB4auoKUh+OY7chcBChTG/3aOpi2H6T8S1Tf9K07tOmw=
+    file_glov: true
+    file: "*.vsix"
+    skip_cleanup: true
+    on:
+      repo: derekbekoe/vscode-spot
+      tags: true
+  - provider: script
+    script: ./node_modules/.bin/vsce publish -p $VSCE_TOKEN
+    skip_cleanup: true
+    on:
+      repo: derekbekoe/vscode-spot
+      tags: true
