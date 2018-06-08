@@ -1,7 +1,7 @@
 {
     "name": "Spot",
     "description": "Instant cloud environments for developers.",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "publisher": "derek-bekoe",
     "galleryBanner": {
         "color": "#3f51b5",
@@ -22,14 +22,15 @@
         "vscode": "^1.22.0"
     },
     "categories": [
-        "Other"
+        "Azure"
     ],
     "keywords": [
         "developer",
         "environment",
         "cloud",
         "azure",
-        "container"
+        "container",
+        "Azure"
     ],
     "activationEvents": [
         "onView:spotExplorer",
