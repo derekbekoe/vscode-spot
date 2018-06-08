@@ -1,3 +1,6 @@
+## [0.3.4]
+- Minor fix
+
 ## [0.3.3]
 - Change tags since only 5 are allowed.
 
