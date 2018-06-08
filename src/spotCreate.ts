@@ -52,6 +52,12 @@ export interface ISpotCreationData {
     instanceToken: string;
 }
 
+export interface ISpotAcrCreds {
+    server: string;
+    username: string;
+    password: string;
+}
+
 export class SpotDeploymentError extends Error {
     constructor(public message: string, public spotCreationData: ISpotCreationData) {
         super(message);
@@ -69,7 +75,8 @@ export async function configureDeploymentTemplate(
     imageName: string,
     spotRegion: string,
     azureSub: AzureSubscription,
-    spotConfig: SpotSetupConfig): Promise<IDeploymentTemplateConfig> {
+    spotConfig: SpotSetupConfig,
+    acrCreds?: ISpotAcrCreds): Promise<IDeploymentTemplateConfig> {
     const buffer: Buffer = await randomBytes(256);
     const instanceToken = buffer.toString('hex');
 
@@ -101,6 +108,13 @@ export async function configureDeploymentTemplate(
         deploymentTemplate.variables.useSSL = '0';
         deploymentTemplate.variables.container1port = SPOT_NOSSL_PORT;
         deploymentTemplate.resources[0].properties.containers = [userContainer];
+    }
+    if (acrCreds) {
+        deploymentTemplate.resources[0].properties.imageRegistryCredentials = [{
+            server: acrCreds.server,
+            username: acrCreds.username,
+            password: acrCreds.password
+        }];
     }
     return {deploymentTemplate: deploymentTemplate,
             hostname: hostname,
@@ -140,6 +154,7 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
     let imageName: string | undefined;
     let spotDNSLabelOk: boolean = false;
     let spotImageNameOk: boolean = false;
+    let acrCreds: ISpotAcrCreds | undefined;
     do {
         spotName = await window.showInputBox(
                 {placeHolder: 'Name of spot.',
@@ -168,27 +183,50 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
         if (!imageName) {
             throw new UserCancelledError('No container image name specified. Operation cancelled.');
         }
-        let dockerhubRepo: string;
-        let dockerhubTag: string;
-        const posOfColon: number = imageName.indexOf(':');
-        if (posOfColon === -1) {
-            dockerhubRepo = imageName;
-            dockerhubTag = 'latest';
-        } else {
-            dockerhubRepo = imageName.substring(0, posOfColon);
-            dockerhubTag = imageName.substring(posOfColon + 1);
-        }
-        // tslint:disable-next-line:max-line-length
-        const reqUri: string = `https://index.docker.io/v1/repositories/${dockerhubRepo}/tags/${dockerhubTag}`;
-        console.log(`Making request to ${reqUri}`);
-        const response = await request({uri: reqUri, method: 'GET', simple: false, resolveWithFullResponse: true});
-        console.log(`Got ${response.statusCode} from ${reqUri}`, response);
-        if (response.statusCode === 404) {
-            // tslint:disable-next-line:max-line-length
-            window.showWarningMessage(`The image ${imageName} is not available on Docker Hub. Please enter a different image name.`, {modal: true});
-        } else {
-            // If there is another other error other than a clear 404, be optimistic and continue.
+        if (imageName.indexOf('azurecr.io') > -1) {
+            // This is an ACR image (we do no validation to check it is valid)
             spotImageNameOk = true;
+            // debekoe.azurecr.io/debekoe-azure-cli:1
+            let acrUser = await window.showInputBox(
+                {placeHolder: 'Registry username.',
+                ignoreFocusOut: true
+            });
+            let acrPass = await window.showInputBox(
+                {placeHolder: 'Registry password.',
+                ignoreFocusOut: true,
+                password: true
+            });
+            if (acrUser && acrPass) {
+                acrCreds = {
+                    server: imageName.substring(0, imageName.indexOf('/')),
+                    username: acrUser,
+                    password: acrPass
+                };
+            }
+        } else {
+            // Assume DockerHub
+            let dockerhubRepo: string;
+            let dockerhubTag: string;
+            const posOfColon: number = imageName.indexOf(':');
+            if (posOfColon === -1) {
+                dockerhubRepo = imageName;
+                dockerhubTag = 'latest';
+            } else {
+                dockerhubRepo = imageName.substring(0, posOfColon);
+                dockerhubTag = imageName.substring(posOfColon + 1);
+            }
+            // tslint:disable-next-line:max-line-length
+            const reqUri: string = `https://index.docker.io/v1/repositories/${dockerhubRepo}/tags/${dockerhubTag}`;
+            console.log(`Making request to ${reqUri}`);
+            const response = await request({uri: reqUri, method: 'GET', simple: false, resolveWithFullResponse: true});
+            console.log(`Got ${response.statusCode} from ${reqUri}`, response);
+            if (response.statusCode === 404) {
+                // tslint:disable-next-line:max-line-length
+                window.showWarningMessage(`The image ${imageName} is not available on Docker Hub. Please enter a different image name.`, {modal: true});
+            } else {
+                // If there is another other error other than a clear 404, be optimistic and continue.
+                spotImageNameOk = true;
+            }
         }
     } while (!spotImageNameOk);
     const spotConfig: SpotSetupConfig = await getSpotSetupConfig(azureSub);
@@ -197,7 +235,8 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
                                                                                           imageName,
                                                                                           spotRegion,
                                                                                           azureSub,
-                                                                                          spotConfig);
+                                                                                          spotConfig,
+                                                                                          acrCreds);
     const deploymentOptions: ResourceModels.Deployment = {
         properties: { mode: 'Incremental', template: deploymentConfig.deploymentTemplate}
     };

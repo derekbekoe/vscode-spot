@@ -3,6 +3,8 @@ import { URL } from 'url';
 import { commands, Extension, ExtensionContext, extensions, MessageItem,
          StatusBarAlignment, StatusBarItem, window } from 'vscode';
 
+import { ContainerRegistryManagementClient, ContainerRegistryManagementModels } from 'azure-arm-containerregistry';
+
 import { AzureAccount, AzureSubscription } from './azure-account.api';
 import { spotConnect, WindowsRequireNodeError } from './spotConnect';
 import { CreationHealthCheckError, ISpotCreationData, spotCreate, SpotDeploymentError } from './spotCreate';
@@ -10,9 +12,10 @@ import { spotDisconnect } from './spotDisconnect';
 import { openFileEditor, SpotFileTracker } from './spotFiles';
 import { ACIDeleteError, MissingConfigVariablesError, spotTerminate } from './spotTerminate';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
-import { KnownSpots, SpotSession, SpotSetupError, UserCancelledError } from './spotUtil';
+import { KnownSpots, SpotSession, SpotSetupError, UserCancelledError, delay } from './spotUtil';
 import { TelemetryReporter, TelemetryResult } from './telemetry';
 import { createTelemetryReporter } from './telemetry';
+import { QuickBuildRequest } from '../../azure-sdk-for-node/lib/services/containerRegistryManagement/lib/models';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -34,6 +37,7 @@ export function activate(context: ExtensionContext) {
     spotTreeDataProvider = new SpotTreeDataProvider(spotFileTracker);
     window.registerTreeDataProvider('spotExplorer', spotTreeDataProvider);
     context.subscriptions.push(commands.registerCommand('spot.Create', cmdSpotCreate));
+    context.subscriptions.push(commands.registerCommand('spot.CreateFromPR', cmdSpotCreateFromPr));
     context.subscriptions.push(commands.registerCommand('spot.Connect', cmdSpotConnect));
     context.subscriptions.push(commands.registerCommand('spot.Disconnect', cmdSpotDisconnect));
     context.subscriptions.push(commands.registerCommand('spot.Terminate', cmdSpotTerminate));
@@ -84,6 +88,73 @@ function getAzureSubscription(): AzureSubscription | undefined {
         return;
     }
     return candidateSubscriptions[0];
+}
+
+async function createFromPr() {
+    const prUrl: string | undefined = await window.showInputBox(
+        {placeHolder: 'Link to PR',
+        ignoreFocusOut: true,
+        validateInput: (val: string) => {
+            return (val.indexOf('github.com') === -1 || val.indexOf('/pull/') === -1) ? 'Use a Github PR' : null;
+        }
+    });
+    const azureSub = getAzureSubscription();
+    if (!prUrl || !azureSub) {
+        console.error('Something was null');
+        return;
+    }
+    const crClient = new ContainerRegistryManagementClient(azureSub.session.credentials,
+                                                           azureSub.subscription.subscriptionId!);
+    let acrPrFormat: string = prUrl.replace('/pull/', '.git#pull/') + '/head';
+    // TODO We should create the registry if it doesn't exist and with a unique name.
+    // crClient.registries.create();
+    const acrRg = 'acr';
+    const acrName = 'debekoe';
+    const prNum = '6516';
+    // TODO Use https://api.github.com/repos/Azure/azure-cli/pulls/6516 (head->sha) to get this value
+    const prHeadSha = 'c79b2698cf0aaf5c9133aace87fefcbd20747a3f';
+    // TODO Check if prImageName is already in the container registry, if so, use that!
+    const prImageName = `pr-azure-azure-cli:${prNum}-${prHeadSha}`;
+    // TODO Check if the default branch has a Dockerfile.spot, otherwise, use Dockerfile.
+    // Dockerfile.spot (used to include source code, git?, and not use alpine).
+    const dockerFilePath = 'Dockerfile';
+    const buildRequest: QuickBuildRequest = {
+        dockerFilePath: dockerFilePath,
+        imageNames: [prImageName],
+        platform: {
+            osType: 'Linux',
+            cpu: 2
+          },
+        isPushEnabled: true,
+        sourceLocation: acrPrFormat,
+        type: "QuickBuild"
+    };
+    const result = await crClient.registries.queueBuild(acrRg, acrName, buildRequest);
+    console.log(result);
+    // TODO Add button to view logs.
+    const buildLogLink = await crClient.builds.getLogLink(acrRg, acrName, result.buildId!);
+    console.log('Build log link', buildLogLink.logLink);
+    let buildComplete = false;
+    while (!buildComplete) {
+        const cur = await crClient.builds.get(acrRg, acrName, result.buildId!);
+        console.log('cur.status', cur.status);
+        if (cur.status === 'Succeeded') {
+            buildComplete = true;
+        }
+        await delay(5000);
+    }
+    console.log('Done.');
+}
+
+function cmdSpotCreateFromPr() {
+    createFromPr()
+    .then(() => {
+        window.showInformationMessage("Spot created successfully. Use 'Spot: Connect' to connect.");
+    })
+    .catch((err: any) => {
+        console.error('Create from PR error', err);
+        window.showErrorMessage(err);
+    });
 }
 
 function cmdSpotCreate() {
