@@ -34,6 +34,7 @@
     "activationEvents": [
         "onView:spotExplorer",
         "onCommand:spot.Create",
+        "onCommand:spot.CreateFromPR",
         "onCommand:spot.Connect",
         "onCommand:spot.Disconnect",
         "onCommand:spot.Terminate"
@@ -56,6 +57,11 @@
             {
                 "command": "spot.Create",
                 "title": "Create",
+                "category": "Spot"
+            },
+            {
+                "command": "spot.CreateFromPR",
+                "title": "Create from PR",
                 "category": "Spot"
             },
             {
@@ -140,6 +146,7 @@
         "@types/semver": "^5.5.0",
         "@types/tmp": "0.0.33",
         "applicationinsights": "1.0.1",
+        "azure-arm-containerregistry": "file:../azure-sdk-for-node/lib/services/containerRegistryManagement",
         "azure-arm-resource": "^3.1.1-preview",
         "azure-arm-storage": "^3.2.0",
         "azure-storage": "^2.8.2",
