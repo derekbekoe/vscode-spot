@@ -1,3 +1,6 @@
+## [0.3.5]
+- Hotfix release.
+
 ## [0.3.4]
 - Minor fix
 
