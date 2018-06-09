@@ -84,6 +84,7 @@ export class KnownSpots {
     }
 
     public getAll(): any {
+        this.ensureKnownSpotsFileExists();
         return JSON.parse(fs.readFileSync(this.knownSpotsFile).toString());
     }
 
@@ -92,6 +93,7 @@ export class KnownSpots {
     }
 
     public clear() {
+        this.ensureKnownSpotsFileExists();
         fs.writeFileSync(this.knownSpotsFile, JSON.stringify({}), {mode: this.FILE_MODE});
         console.log('Cleared known spots.');
     }
@@ -112,6 +114,13 @@ export class KnownSpots {
         delete spots[spotName];
         fs.writeFileSync(this.knownSpotsFile, JSON.stringify(spots), {mode: this.FILE_MODE});
         console.log(`Removed known spot: name=${spotName}`);
+    }
+
+    private ensureKnownSpotsFileExists(): void {
+        ensureDirectoryExistence(this.knownSpotsFile);
+        if (!fs.existsSync(this.knownSpotsFile)) {
+            fs.writeFileSync(this.knownSpotsFile, JSON.stringify({}), {mode: this.FILE_MODE});
+        }
     }
 
 }
