@@ -94,6 +94,7 @@ export async function spotConnect(hostname: string,
     if (isWindows && !await windowsPrereqsOkay()) {
         throw new WindowsRequireNodeError('Node requirements on Windows not satisfied.');
     }
+    window.showInformationMessage('Running health check for spot');
     await spotHealthCheck(hostname, instanceToken);
     const activeSession = new SpotSession(hostname, instanceToken);
     spotFileTracker.connect(activeSession);
