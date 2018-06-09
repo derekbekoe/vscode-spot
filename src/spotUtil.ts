@@ -4,7 +4,6 @@ import * as path from 'path';
 import * as request from 'request';
 import { URL } from 'url';
 import * as util from 'util';
-import { window } from 'vscode';
 
 /* tslint:disable:max-classes-per-file */
 
@@ -39,7 +38,6 @@ export function ensureDirectoryExistence(filePath: string) {
 export async function spotHealthCheck(hostname: string, instanceToken: string): Promise<void> {
     const secsBetweenAttempts = 4;
     const maxAttempts = 90;
-    window.showInformationMessage('Running health check for spot');
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         console.log(`Requesting health check from ${hostname}. Attempt ${attempt}/${maxAttempts}.`);
         try {

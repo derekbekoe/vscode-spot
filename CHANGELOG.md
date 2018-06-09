@@ -1,3 +1,9 @@
+## [0.3.6]
+- Resolve failing terminal load after 0.3.4 release.
+
+## [0.3.5]
+- Hotfix release to revert 0.3.4.
+
 ## [0.3.4]
 - Minor fix
 
