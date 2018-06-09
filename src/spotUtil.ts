@@ -42,7 +42,9 @@ export async function spotHealthCheck(hostname: string, instanceToken: string): 
         console.log(`Requesting health check from ${hostname}. Attempt ${attempt}/${maxAttempts}.`);
         try {
             // tslint:disable-next-line:max-line-length
-            const resp: any = await util.promisify(request.get)({url: `${hostname}/health-check?token=${instanceToken}`},
+            const checkUrl: string = `${hostname}/health-check?token=${instanceToken}`;
+            console.log('Health check to ', checkUrl);
+            const resp: any = await util.promisify(request.get)({url: checkUrl},
                                                                 undefined);
             console.log('Health check response', resp);
             if (resp !== undefined) {
