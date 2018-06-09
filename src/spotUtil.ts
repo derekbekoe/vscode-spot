@@ -42,7 +42,9 @@ export async function spotHealthCheck(hostname: string, instanceToken: string): 
         console.log(`Requesting health check from ${hostname}. Attempt ${attempt}/${maxAttempts}.`);
         try {
             // tslint:disable-next-line:max-line-length
-            const resp: any = await util.promisify(request.get)({url: `${hostname}/health-check?token=${instanceToken}`},
+            const checkUrl: string = `${hostname}/health-check?token=${instanceToken}`;
+            console.log('Health check to ', checkUrl);
+            const resp: any = await util.promisify(request.get)({url: checkUrl},
                                                                 undefined);
             console.log('Health check response', resp);
             if (resp !== undefined) {
@@ -82,6 +84,7 @@ export class KnownSpots {
     }
 
     public getAll(): any {
+        this.ensureKnownSpotsFileExists();
         return JSON.parse(fs.readFileSync(this.knownSpotsFile).toString());
     }
 
@@ -90,6 +93,7 @@ export class KnownSpots {
     }
 
     public clear() {
+        this.ensureKnownSpotsFileExists();
         fs.writeFileSync(this.knownSpotsFile, JSON.stringify({}), {mode: this.FILE_MODE});
         console.log('Cleared known spots.');
     }
@@ -110,6 +114,13 @@ export class KnownSpots {
         delete spots[spotName];
         fs.writeFileSync(this.knownSpotsFile, JSON.stringify(spots), {mode: this.FILE_MODE});
         console.log(`Removed known spot: name=${spotName}`);
+    }
+
+    private ensureKnownSpotsFileExists(): void {
+        ensureDirectoryExistence(this.knownSpotsFile);
+        if (!fs.existsSync(this.knownSpotsFile)) {
+            fs.writeFileSync(this.knownSpotsFile, JSON.stringify({}), {mode: this.FILE_MODE});
+        }
     }
 
 }
