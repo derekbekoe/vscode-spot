@@ -36,8 +36,8 @@ export function ensureDirectoryExistence(filePath: string) {
 }
 
 export async function spotHealthCheck(hostname: string, instanceToken: string): Promise<void> {
-    const secsBetweenAttempts = 4;
-    const maxAttempts = 90;
+    const secsBetweenAttempts = 1;
+    const maxAttempts = 10;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         console.log(`Requesting health check from ${hostname}. Attempt ${attempt}/${maxAttempts}.`);
         try {

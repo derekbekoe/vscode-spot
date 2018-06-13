@@ -151,7 +151,8 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
         }
         try {
             const fullHostname = `${spotName}.${spotRegion}.azurecontainer.io`;
-            await util.promisify(dns.lookup)(fullHostname);
+            console.log(`Resolving DNS for ${fullHostname} to check if exists already.`);
+            await util.promisify(dns.resolve)(fullHostname);
             console.log('Spot DNS label check', `${fullHostname} appears taken. Try another.`);
             // tslint:disable-next-line:max-line-length
             window.showWarningMessage(`Spot name ${spotName} in region ${spotRegion} is taken. Please enter a different name or try again later.`, {modal: true});
