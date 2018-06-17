@@ -4,7 +4,18 @@ import { URL } from 'url';
 import * as WS from 'ws';
 
 import { readJSON, sendData } from './ipc';
-import { delay, getWsProtocol } from './spotUtil';
+
+/* This following functions are copied from ./spotUtil to minimize dependencies this file has */
+
+async function delay(ms: number) {
+    return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+function getWsProtocol(consoleUrl: URL) {
+    return consoleUrl.protocol.startsWith('https') ? 'wss' : 'ws';
+}
+
+/* END */
 
 function getWindowSize() {
     const stdout: any = process.stdout;

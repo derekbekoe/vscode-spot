@@ -3,9 +3,10 @@ import { MessageItem, window, workspace } from 'vscode';
 
 import { ResourceManagementClient } from 'azure-arm-resource';
 import { AzureSubscription } from './azure-account.api';
-import { KnownSpots, UserCancelledError } from "./spotUtil";
 
+import { Logging } from './logging';
 import { DEFAULT_RG_NAME } from './spotSetup';
+import { KnownSpots, UserCancelledError } from "./spotUtil";
 
 const AZURE_ACI_RP: string = "Microsoft.ContainerInstance";
 const AZURE_ACI_RT: string = "containerGroups";
@@ -31,7 +32,7 @@ export async function spotTerminate(azureSub: AzureSubscription, knownSpots: Kno
     if (delMsgItem !== confirmYesMsgItem) {
         throw new UserCancelledError('User cancelled spot delete operation.');
     }
-    console.log(`Attempting to terminate spot ${spotName}`);
+    Logging.log(`Attempting to terminate spot ${spotName}`);
     window.showInformationMessage(`Attempting to terminate spot ${spotName}`);
     const rmClient = new ResourceManagementClient(azureSub.session.credentials, azureSub.subscription.subscriptionId!);
     const resourceGroupName = workspace.getConfiguration('spot').get<string>('azureResourceGroup') || DEFAULT_RG_NAME;
@@ -55,7 +56,7 @@ export async function spotTerminate(azureSub: AzureSubscription, knownSpots: Kno
     } catch (err) {
         throw new ACIDeleteError(err);
     }
-    console.log('Spot deleted');
+    Logging.log('Spot deleted');
     window.showInformationMessage('Spot terminated!');
     knownSpots.remove(spotName);
 }

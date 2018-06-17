@@ -4,6 +4,8 @@ import * as path from 'path';
 import * as request from 'request-promise';
 import { URL } from 'url';
 
+import { Logging } from './logging';
+
 /* tslint:disable:max-classes-per-file */
 
 export class SpotSetupError extends Error {}
@@ -12,14 +14,6 @@ export class HealthCheckError extends Error {}
 
 export class SpotSession {
     constructor(public hostname: string, public token: string) {}
-}
-
-export async function delay(ms: number) {
-    return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
-export function getWsProtocol(consoleUrl: URL) {
-    return consoleUrl.protocol.startsWith('https') ? 'wss' : 'ws';
 }
 
 export function ensureDirectoryExistence(filePath: string) {
@@ -35,27 +29,27 @@ export async function spotHealthCheck(hostname: string, instanceToken: string): 
     const secsBetweenAttempts = 4;
     const maxAttempts = 50;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        console.log(`Requesting health check from ${hostname}. Attempt ${attempt}/${maxAttempts}.`);
+        Logging.log(`Requesting health check from ${hostname}. Attempt ${attempt}/${maxAttempts}.`);
         try {
             const checkUrl: string = `${hostname}/health-check?token=${instanceToken}`;
-            console.log('Health check to ', checkUrl);
+            Logging.log('Health check to ', checkUrl);
             const resp: any = await request.get(checkUrl, {resolveWithFullResponse: true});
-            console.log('Health check response', resp);
+            Logging.log('Health check response', resp);
             if (resp !== undefined) {
                 if (resp.statusCode === 200) {
-                    console.log('Health check successful.');
+                    Logging.log('Health check successful.');
                     return;
                 } else {
                     throw new Error('Spot health check failed');
                 }
             }
         } catch (err) {
-            console.log('Health check response', err);
+            Logging.log('Health check response', err);
         }
-        console.log(`Waiting ${secsBetweenAttempts} sec(s).`);
+        Logging.log(`Waiting ${secsBetweenAttempts} sec(s).`);
         await delay(secsBetweenAttempts * 1000);
     }
-    console.log('Health check timeout');
+    Logging.log('Health check timeout');
     throw new Error('Spot health check failed');
 }
 
@@ -89,14 +83,14 @@ export class KnownSpots {
     public clear() {
         this.ensureKnownSpotsFileExists();
         fs.writeFileSync(this.knownSpotsFile, JSON.stringify({}), {mode: this.FILE_MODE});
-        console.log('Cleared known spots.');
+        Logging.log('Cleared known spots.');
     }
 
     public add(spotName: string, hostname: string, instanceToken: string) {
         const spots = this.getAll();
         spots[spotName] = new KnownSpotInfo(hostname, instanceToken);
         fs.writeFileSync(this.knownSpotsFile, JSON.stringify(spots), {mode: this.FILE_MODE});
-        console.log(`Added known spot: name=${spotName} hostname=${hostname}`);
+        Logging.log(`Added known spot: name=${spotName} hostname=${hostname}`);
     }
 
     public get(spotName: string) {
@@ -107,7 +101,7 @@ export class KnownSpots {
         const spots = this.getAll();
         delete spots[spotName];
         fs.writeFileSync(this.knownSpotsFile, JSON.stringify(spots), {mode: this.FILE_MODE});
-        console.log(`Removed known spot: name=${spotName}`);
+        Logging.log(`Removed known spot: name=${spotName}`);
     }
 
     private ensureKnownSpotsFileExists(): void {

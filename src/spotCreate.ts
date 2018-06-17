@@ -10,6 +10,7 @@ import { MessageItem, window, workspace } from 'vscode';
 
 import { AzureSubscription } from './azure-account.api';
 import { randomBytes } from './ipc';
+import { Logging } from './logging';
 import { certbotContainer, deploymentTemplateBase, userContainer } from './spotDeploy';
 import { getSpotAcrSetupConfig, getSpotSetupConfig, IAcrSetupConfig, SpotSetupConfig } from './spotSetup';
 import { delay, HealthCheckError, spotHealthCheck, UserCancelledError } from './spotUtil';
@@ -102,12 +103,12 @@ export async function configureDeploymentTemplate(
     // tslint:disable-next-line:max-line-length
     const hostname: string = useSSL ? `https://${spotName}.${spotRegion}.azurecontainer.io:${SPOT_SSL_PORT}` : `http://${spotName}.${spotRegion}.azurecontainer.io:${SPOT_NOSSL_PORT}`;
     if (useSSL) {
-        console.log('Spot will be created with SSL enabled.');
+        Logging.log('Spot will be created with SSL enabled.');
         deploymentTemplate.variables.useSSL = '1';
         deploymentTemplate.variables.container1port = SPOT_SSL_PORT;
         deploymentTemplate.resources[0].properties.containers = [userContainer, certbotContainer];
     } else {
-        console.log('Spot will be created with SSL disabled.');
+        Logging.log('Spot will be created with SSL disabled.');
         deploymentTemplate.variables.useSSL = '0';
         deploymentTemplate.variables.container1port = SPOT_NOSSL_PORT;
         deploymentTemplate.resources[0].properties.containers = [userContainer];
@@ -164,13 +165,13 @@ async function getSpotNameFromUser(spotRegion: string): Promise<string> {
         }
         try {
             const fullHostname = `${spotName}.${spotRegion}.azurecontainer.io`;
-            console.log(`Resolving DNS for ${fullHostname} to check if exists already.`);
+            Logging.log(`Resolving DNS for ${fullHostname} to check if exists already.`);
             await util.promisify(dns.resolve)(fullHostname);
-            console.log('Spot DNS label check', `${fullHostname} appears taken. Try another.`);
+            Logging.log('Spot DNS label check', `${fullHostname} appears taken. Try another.`);
             // tslint:disable-next-line:max-line-length
             window.showWarningMessage(`Spot name ${spotName} in region ${spotRegion} is taken. Please enter a different name or try again later.`, {modal: true});
         } catch (err) {
-            console.log('Spot DNS label check OK', err.message);
+            Logging.log('Spot DNS label check OK', err.message);
             // DNS label available or failed to check so continue optimistically.
             spotDNSLabelOk = true;
         }
@@ -224,9 +225,9 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
             }
             // tslint:disable-next-line:max-line-length
             const reqUri: string = `https://index.docker.io/v1/repositories/${dockerhubRepo}/tags/${dockerhubTag}`;
-            console.log(`Making request to ${reqUri}`);
+            Logging.log(`Making request to ${reqUri}`);
             const response = await request({uri: reqUri, method: 'GET', simple: false, resolveWithFullResponse: true});
-            console.log(`Got ${response.statusCode} from ${reqUri}`, response);
+            Logging.log(`Got ${response.statusCode} from ${reqUri}`, response);
             if (response.statusCode === 404) {
                 // tslint:disable-next-line:max-line-length
                 window.showWarningMessage(`The image ${imageName} is not available on Docker Hub. Please enter a different image name.`, {modal: true});
@@ -255,7 +256,7 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
     if (confimMsgResponse !== confirmYesMsgItem) {
         throw new UserCancelledError('User cancelled spot create operation.');
     }
-    console.log('Deployment template for spot creation', deploymentConfig.deploymentTemplate);
+    Logging.log('Deployment template for spot creation', deploymentConfig.deploymentTemplate);
     window.showInformationMessage(`Creating spot ${spotName}`);
     const rmClient = new ResourceManagementClient(azureSub.session.credentials,
                                                     azureSub.subscription.subscriptionId!);
@@ -270,9 +271,9 @@ export async function spotCreate(azureSub: AzureSubscription): Promise<ISpotCrea
                                             spotConfig.resourceGroupName,
                                             deploymentName,
                                             deploymentOptions);
-        console.log('Deployment provisioningState', deploymentResult.properties!.provisioningState);
-        console.log('Deployment correlationId', deploymentResult.properties!.correlationId);
-        console.log('Deployment completed');
+        Logging.log('Deployment provisioningState', deploymentResult.properties!.provisioningState);
+        Logging.log('Deployment correlationId', deploymentResult.properties!.correlationId);
+        Logging.log('Deployment completed');
     } catch (err) {
         throw new SpotDeploymentError(err, spotCreationData);
     }
@@ -322,7 +323,7 @@ async function imageInRegistry(acrConfig: IAcrSetupConfig, prImageName: string):
         const tagFound = acrTagResponse.tags.find((val) => val === imageRepoTag[1]);
         return tagFound === undefined ? false : true;
     } catch (err) {
-        console.log('Check image in registry error', err.message);
+        Logging.log('Check image in registry error', err.message);
         return false;
     }
 }
@@ -336,11 +337,11 @@ async function buildContainerFromPr(azureSub: AzureSubscription,
                                                             azureSub.subscription.subscriptionId!);
     if (await imageInRegistry(acrConfig, prImageName)) {
         // tslint:disable-next-line:max-line-length
-        console.log(`Found the image ${prImageName} in the registry ${acrConfig.registryLoginServer}. No need to build container.`);
+        Logging.log(`Found the image ${prImageName} in the registry ${acrConfig.registryLoginServer}. No need to build container.`);
         window.showInformationMessage('The image for this PR and commit is already available to use.');
         return true;
     } else {
-        console.log(`Image ${prImageName} not found in registry ${acrConfig.registryLoginServer} so building...`);
+        Logging.log(`Image ${prImageName} not found in registry ${acrConfig.registryLoginServer} so building...`);
     }
 
     // TODO Check that the current image is not already queued for building once this API is made available in ACR
@@ -353,16 +354,16 @@ async function buildContainerFromPr(azureSub: AzureSubscription,
         sourceLocation: prAcrSource,
         type: "QuickBuild"
     };
-    console.log(`Image name: ${acrConfig.registryLoginServer}/${prImageName}`);
+    Logging.log(`Image name: ${acrConfig.registryLoginServer}/${prImageName}`);
     const queueBuildResult = await acrClient.registries.queueBuild(acrConfig.registryGroup,
                                                                    acrConfig.registryName,
                                                                    buildRequest);
-    console.log('Queue Build result', queueBuildResult);
+    Logging.log('Queue Build result', queueBuildResult);
     const buildLogLink = await acrClient.builds.getLogLink(acrConfig.registryGroup,
                                                            acrConfig.registryName,
                                                            queueBuildResult.buildId!);
     const viewLogsBtn: MessageItem = { title: "View Logs in browser" };
-    console.log('Build log link', buildLogLink.logLink);
+    Logging.log('Build log link', buildLogLink.logLink);
     window.showInformationMessage(`Building container for PR.`, viewLogsBtn)
     .then((msgItem: MessageItem | undefined) => {
         if (msgItem === viewLogsBtn && buildLogLink.logLink) {
@@ -375,7 +376,7 @@ async function buildContainerFromPr(azureSub: AzureSubscription,
         const cur = await acrClient.builds.get(acrConfig.registryGroup,
                                                acrConfig.registryName,
                                                queueBuildResult.buildId!);
-        console.log('Current build status', cur.status);
+        Logging.log('Current build status', cur.status);
         if (cur.status === 'Succeeded') {
             return true;
         }
@@ -425,13 +426,13 @@ export async function spotCreateFromPR(azureSub: AzureSubscription): Promise<ISp
             // tslint:disable-next-line:max-line-length
             const reqUri = `https://github.com/${prInfo!.repoUser}/${prInfo!.repoName}/blob/${ghResponse.base.repo.default_branch}/${dockerfile}`;
             try {
-                console.log(`HEAD request to ${reqUri}`);
+                Logging.log(`HEAD request to ${reqUri}`);
                 await request.head(reqUri);
-                console.log(`Using Docker file path as ${dockerfile}`);
+                Logging.log(`Using Docker file path as ${dockerfile}`);
                 prInfo.dockerFilePath = dockerfile;
                 break;
             } catch (err) {
-                console.log(`Not able to find ${dockerfile}. Request failed for ${reqUri}`, err.message);
+                Logging.log(`Not able to find ${dockerfile}. Request failed for ${reqUri}`, err.message);
             }
         }
         if (prInfo.dockerFilePath === undefined) {
@@ -477,7 +478,7 @@ export async function spotCreateFromPR(azureSub: AzureSubscription): Promise<ISp
     const deploymentOptions: ResourceModels.Deployment = {
         properties: { mode: 'Incremental', template: deploymentConfig.deploymentTemplate}
     };
-    console.log('Deployment template for spot creation', deploymentConfig.deploymentTemplate);
+    Logging.log('Deployment template for spot creation', deploymentConfig.deploymentTemplate);
     window.showInformationMessage(`Creating spot ${spotName}`);
     const rmClient = new ResourceManagementClient(azureSub.session.credentials,
                                                     azureSub.subscription.subscriptionId!);
@@ -493,9 +494,9 @@ export async function spotCreateFromPR(azureSub: AzureSubscription): Promise<ISp
                                             spotConfig.resourceGroupName,
                                             deploymentName,
                                             deploymentOptions);
-        console.log('Deployment provisioningState', deploymentResult.properties!.provisioningState);
-        console.log('Deployment correlationId', deploymentResult.properties!.correlationId);
-        console.log('Deployment completed');
+        Logging.log('Deployment provisioningState', deploymentResult.properties!.provisioningState);
+        Logging.log('Deployment correlationId', deploymentResult.properties!.correlationId);
+        Logging.log('Deployment completed');
     } catch (err) {
         throw new SpotDeploymentError(err, spotCreationData);
     }

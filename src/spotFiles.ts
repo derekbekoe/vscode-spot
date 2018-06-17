@@ -8,6 +8,7 @@ import { commands, Event, EventEmitter, TextDocumentSaveReason, TextDocumentWill
          workspace } from 'vscode';
 import * as WS from 'ws';
 
+import { Logging } from './logging';
 import { ensureDirectoryExistence, getWsProtocol, SpotSession } from './spotUtil';
 
 /* tslint:disable:max-classes-per-file */
@@ -37,12 +38,12 @@ export class SpotFileTracker {
     this.onFilesChangedEmitter.fire(this.files);
     this.ws = new WS(socketUri);
     this.ws.on('open', () => {
-      console.log('socket open');
+      Logging.log('socket open');
       handledRootDir = false;
     });
 
     this.ws.on('message', (data: string) => {
-      console.log('socket data', data);
+      Logging.log('socket data', data);
       const objdata = JSON.parse(data);
       if (objdata.event === 'addDir'  || objdata.event === 'add') {
         if (objdata.event === 'addDir' && !handledRootDir) {
@@ -74,7 +75,7 @@ export class SpotFileTracker {
     });
 
     this.ws.on('close', () => {
-      console.log('Socket closed');
+      Logging.log('Socket closed');
     });
   }
 
@@ -161,6 +162,6 @@ export function openFileEditor(documentPath: any, session: SpotSession) {
     console.error('Socket error: ' + JSON.stringify(event));
   });
   ws.on('close', () => {
-    console.log('Socket closed');
+    Logging.log('Socket closed');
   });
 }

@@ -7,8 +7,10 @@ import { ContainerRegistryManagementClient, ContainerRegistryManagementModels } 
 import { ResourceManagementClient } from 'azure-arm-resource';
 import StorageManagementClient = require('azure-arm-storage');
 import { FileService } from 'azure-storage';
+
 import { AzureSubscription } from './azure-account.api';
 import { randomBytes } from './ipc';
+import { Logging } from './logging';
 import { SpotSetupError } from './spotUtil';
 
 export const DEFAULT_RG_NAME = 'vscode-spot';
@@ -49,7 +51,7 @@ async function downloadFileToTmp(uri: string): Promise<string> {
             reject();
         })
         .on('end', () => {
-            console.log('Downloaded', uri, dest);
+            Logging.log('Downloaded', uri, dest);
             resolve(dest);
         })
         .pipe(file);
@@ -65,7 +67,7 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
         if (azureFileShareName1 && azureStorageAccountName && azureStorageAccountKey) {
             // tslint:disable-next-line:max-line-length no-shadowed-variable
             const azureFileShareName2 = workspace.getConfiguration('spot').get<string>('azureFileShareName2') || azureFileShareName1;
-            console.log('Using custom spot setup configuration');
+            Logging.log('Using custom spot setup configuration');
             return new SpotSetupConfig(resourceGroupName, azureFileShareName1, azureFileShareName2,
                                        azureStorageAccountName, azureStorageAccountKey);
         } else {
@@ -85,51 +87,51 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
             throw new SpotSetupError('Cancelled set up.');
         }
         await rmClient.resourceGroups.createOrUpdate(resourceGroupName, {location: 'westus'});
-        console.log(`Created resource group ${resourceGroupName}`);
+        Logging.log(`Created resource group ${resourceGroupName}`);
         let newStName = 'spot' + (await randomBytes(10)).toString('hex').toLowerCase().substring(0, 18);
         let stNameAvailable = false;
         for (let i = 0; i < 10 && !stNameAvailable; i++) {
-            console.log(`Proposed storage account: ${newStName}`);
+            Logging.log(`Proposed storage account: ${newStName}`);
             if ((await stClient.storageAccounts.checkNameAvailability(newStName)).nameAvailable) {
                 stNameAvailable = true;
                 break;
             } else {
-                console.log(`${newStName} is unavailable.`);
+                Logging.log(`${newStName} is unavailable.`);
                 newStName = 'spot' + (await randomBytes(10)).toString('hex').toLowerCase().substring(0, 18);
             }
         }
         if (!stNameAvailable) {
             const errMsg = 'Unable to get a unique storage account name.';
-            console.log(errMsg);
+            Logging.log(errMsg);
             await rmClient.resourceGroups.deleteMethod(resourceGroupName);
             throw new SpotSetupError(`${errMsg} Please try again.`);
         }
         azureStorageAccountName = newStName;
-        console.log(`Found unique storage account name of '${azureStorageAccountName}'. Creating storage account...`);
+        Logging.log(`Found unique storage account name of '${azureStorageAccountName}'. Creating storage account...`);
         await stClient.storageAccounts.create(resourceGroupName,
                                               azureStorageAccountName,
                                               {sku: {name: 'Standard_LRS'},
                                                kind: 'Storage', location: 'westus'});
-        console.log('Created storage account successfully.');
+        Logging.log('Created storage account successfully.');
         const stKeysResult = await stClient.storageAccounts.listKeys(resourceGroupName, azureStorageAccountName);
         if (stKeysResult === undefined || stKeysResult.keys === undefined) {
-            console.log('Unable to get storage account key.');
+            Logging.log('Unable to get storage account key.');
             await rmClient.resourceGroups.deleteMethod(resourceGroupName);
             throw new SpotSetupError(`Please try again.`);
         }
         azureStorageAccountKey = stKeysResult.keys[0].value;
         const fileService = new FileService(azureStorageAccountName, azureStorageAccountKey);
         azureFileShareName1 = DEFAULT_SHARE_NAME;
-        console.log(`Creating share in storage account '${azureStorageAccountName}', name '${azureFileShareName1}'`);
+        Logging.log(`Creating share in storage account '${azureStorageAccountName}', name '${azureFileShareName1}'`);
         await handleStorageDataPlane<FileService.ShareResult>(fileService,
                                                               FileService.prototype.createShareIfNotExists,
                                                               azureFileShareName1);
-        console.log('Created share successfully.');
-        console.log('Downloading spot host resources.');
+        Logging.log('Created share successfully.');
+        Logging.log('Downloading spot host resources.');
         const tmpSpotHost: string = await downloadFileToTmp(URL_SPOT_HOST);
         const tmpSpotHostPtyNode: string = await downloadFileToTmp(URL_SPOT_HOST_PTY);
         const tmpSpotCertbot: string = await downloadFileToTmp(URL_SPOT_CERTBOT);
-        console.log('Uploading spot host resources.');
+        Logging.log('Uploading spot host resources.');
         await handleStorageDataPlane<FileService.FileResult>(fileService,
                                                              FileService.prototype.createFileFromLocalFile,
                                                              azureFileShareName1,
@@ -150,16 +152,16 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
                                                              tmpSpotCertbot);
         window.showInformationMessage(`Set up completed successfully...`);
     } else {
-        console.log(`Resource group '${resourceGroupName}' exists so using that.`);
+        Logging.log(`Resource group '${resourceGroupName}' exists so using that.`);
         const stAccounts = await stClient.storageAccounts.listByResourceGroup(resourceGroupName);
         if (stAccounts.length !== 1) {
-            console.log(`Expected only 1 storage account. Found ${stAccounts.length}`);
+            Logging.log(`Expected only 1 storage account. Found ${stAccounts.length}`);
             throw new SpotSetupError(`Please delete the '${resourceGroupName}' resource group and try again.`);
         }
         azureStorageAccountName = stAccounts[0].name!;
         const stKeysResult = await stClient.storageAccounts.listKeys(resourceGroupName, azureStorageAccountName);
         if (stKeysResult === undefined || stKeysResult.keys === undefined) {
-            console.log(`Unable to get storage account key.`);
+            Logging.log(`Unable to get storage account key.`);
             throw new SpotSetupError(`Please delete the '${resourceGroupName}' resource group and try again.`);
         }
         azureStorageAccountKey = stKeysResult.keys[0].value;
@@ -169,7 +171,7 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
                                                                                 FileService.prototype.doesShareExist,
                                                                                 azureFileShareName1);
         if (!shareResult.exists) {
-            console.log(`Share ${azureFileShareName1} does not exist in storage account ${azureStorageAccountName}`);
+            Logging.log(`Share ${azureFileShareName1} does not exist in storage account ${azureStorageAccountName}`);
             throw new SpotSetupError(`Please delete the '${resourceGroupName}' resource group and try again.`);
         }
         if (!(await handleStorageDataPlane<FileService.FileResult>(fileService,
@@ -186,7 +188,7 @@ export async function getSpotSetupConfig(azureSub: AzureSubscription): Promise<S
                                                                    '', 'certbot.sh')).exists) {
             // tslint:disable-next-line:max-line-length
             const errMsg: string = `The share ${azureFileShareName1} in storage account ${azureStorageAccountName} does not contain the required files`;
-            console.log(errMsg);
+            Logging.log(errMsg);
             // tslint:disable-next-line:max-line-length
             throw new SpotSetupError(`${errMsg}. Please delete the '${resourceGroupName}' resource group and try again.`);
         }
@@ -219,21 +221,21 @@ export async function getSpotAcrSetupConfig(azureSub: AzureSubscription,
         let newAcrName = 'spot' + (await randomBytes(10)).toString('hex').toLowerCase().substring(0, 18);
         let nameAvailable = false;
         for (let i = 0; i < 10 && !nameAvailable; i++) {
-            console.log(`Proposed ACR: ${newAcrName}`);
+            Logging.log(`Proposed ACR: ${newAcrName}`);
             if (await acrClient.registries.checkNameAvailability({name: newAcrName})) {
                 nameAvailable = true;
                 break;
             } else {
-                console.log(`${newAcrName} is unavailable.`);
+                Logging.log(`${newAcrName} is unavailable.`);
                 newAcrName = 'spot' + (await randomBytes(10)).toString('hex').toLowerCase().substring(0, 18);
             }
         }
         if (!newAcrName) {
             const errMsg = 'Unable to get a unique container registry name.';
-            console.log(errMsg);
+            Logging.log(errMsg);
             throw new SpotSetupError(`${errMsg} Please try again.`);
         }
-        console.log(`Found unique container registry name of '${newAcrName}'. Creating container registry...`);
+        Logging.log(`Found unique container registry name of '${newAcrName}'. Creating container registry...`);
         const okMsgItem: MessageItem = {title: 'Ok'};
         const cancelMsgItem: MessageItem = {title: 'Cancel'};
         // tslint:disable-next-line:max-line-length
@@ -248,7 +250,7 @@ export async function getSpotAcrSetupConfig(azureSub: AzureSubscription,
     } else if (registries.length === 1) {
         spotRegistry = registries[0];
     } else {
-        console.log(`Expected only 1 ACR registry. Found ${registries.length}`);
+        Logging.log(`Expected only 1 ACR registry. Found ${registries.length}`);
         throw new SpotSetupError(`Please delete the '${sConfig.resourceGroupName}' resource group and try again.`);
     }
     const regCreds = await acrClient.registries.listCredentials(sConfig.resourceGroupName, spotRegistry.name!);

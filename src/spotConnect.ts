@@ -5,6 +5,7 @@ import * as semver from 'semver';
 import { MessageItem, window } from 'vscode';
 
 import { createServer, ipcQueue, readJSON } from './ipc';
+import { Logging } from './logging';
 import { SpotFileTracker } from './spotFiles';
 import { SpotSession } from "./spotUtil";
 import {spotHealthCheck } from './spotUtil';
@@ -36,9 +37,9 @@ async function createSpotConsole(session: SpotSession): Promise<void> {
             if (message.type === 'poll') {
                 dequeue = true;
             } else if (message.type === 'log') {
-                console.log(...message.args);
+                Logging.log(...message.args);
             } else if (message.type === 'status') {
-                console.log('Received status message');
+                Logging.log('Received status message');
             }
         }
         let response = [];
@@ -75,7 +76,7 @@ async function windowsPrereqsOkay(): Promise<boolean> {
         }
         return true;
     } catch (err) {
-        console.log(err);
+        Logging.log(err);
         const open: MessageItem = { title: "Download Node.js" };
         // tslint:disable-next-line:max-line-length
         const message = "Opening a Spot currently requires Node.js 6 or later to be installed (https://nodejs.org) on Windows.";

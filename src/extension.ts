@@ -4,6 +4,7 @@ import { commands, Extension, ExtensionContext, extensions, MessageItem,
          StatusBarAlignment, StatusBarItem, window } from 'vscode';
 
 import { AzureAccount, AzureSubscription } from './azure-account.api';
+import { Logging } from './logging';
 import { spotConnect, WindowsRequireNodeError } from './spotConnect';
 import { CreationHealthCheckError, ISpotCreationData,
          spotCreate, spotCreateFromPR, SpotDeploymentError } from './spotCreate';
@@ -13,7 +14,6 @@ import { ACIDeleteError, MissingConfigVariablesError, spotTerminate } from './sp
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { KnownSpots, SpotSession, SpotSetupError, UserCancelledError } from './spotUtil';
 import { createTelemetryReporter, TelemetryReporter, TelemetryResult } from './telemetry';
-import { SpotLog } from './logging';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -29,7 +29,7 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(statusBarItem);
     spotFileTracker = new SpotFileTracker();
     knownSpots = new KnownSpots();
-    SpotLog.configureOutputChannel();
+    Logging.configureOutputChannel();
     // tslint:disable-next-line:max-line-length
     const azureAccountExtension: Extension<AzureAccount> | undefined = extensions.getExtension<AzureAccount>('ms-vscode.azure-account');
     azureAccount = azureAccountExtension ? azureAccountExtension.exports : undefined;
@@ -120,7 +120,7 @@ function genericSpotCreate(spotCreatorFn: (sub: AzureSubscription) => Promise<IS
     })
     .catch((ex) => {
         if (ex instanceof UserCancelledError) {
-            console.log('User cancelled spot create operation.');
+            Logging.log('User cancelled spot create operation.');
             reporter.sendTelemetryEvent('spotCreate/conclude',
                         {'spot.result': TelemetryResult.USER_RECOVERABLE,
                         'spot.reason': 'USER_CANCELLED'});
@@ -299,7 +299,7 @@ function terminateSpot() {
     })
     .catch((ex: any) => {
         if (ex instanceof UserCancelledError) {
-            console.log('User cancelled spot delete operation.', ex.message);
+            Logging.log('User cancelled spot delete operation.', ex.message);
             reporter.sendTelemetryEvent('spotTerminate/conclude',
                         {'spot.result': TelemetryResult.USER_RECOVERABLE,
                         'spot.reason': 'USER_CANCELLED'});
