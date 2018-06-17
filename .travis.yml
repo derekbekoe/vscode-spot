@@ -13,6 +13,7 @@ install:
 script:
 - npm run vscode:prepublish
 - npm run lint
+- ./node_modules/.bin/vsce package
 before_deploy:
 - ./node_modules/.bin/vsce package
 deploy:

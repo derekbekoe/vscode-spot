@@ -5,7 +5,8 @@ import { commands, Extension, ExtensionContext, extensions, MessageItem,
 
 import { AzureAccount, AzureSubscription } from './azure-account.api';
 import { spotConnect, WindowsRequireNodeError } from './spotConnect';
-import { CreationHealthCheckError, ISpotCreationData, spotCreate, SpotDeploymentError } from './spotCreate';
+import { CreationHealthCheckError, ISpotCreationData,
+         spotCreate, spotCreateFromPR, SpotDeploymentError } from './spotCreate';
 import { spotDisconnect } from './spotDisconnect';
 import { openFileEditor, SpotFileTracker } from './spotFiles';
 import { ACIDeleteError, MissingConfigVariablesError, spotTerminate } from './spotTerminate';
@@ -34,6 +35,7 @@ export function activate(context: ExtensionContext) {
     spotTreeDataProvider = new SpotTreeDataProvider(spotFileTracker);
     window.registerTreeDataProvider('spotExplorer', spotTreeDataProvider);
     context.subscriptions.push(commands.registerCommand('spot.Create', cmdSpotCreate));
+    context.subscriptions.push(commands.registerCommand('spot.CreateFromPR', cmdSpotCreateFromPr));
     context.subscriptions.push(commands.registerCommand('spot.Connect', cmdSpotConnect));
     context.subscriptions.push(commands.registerCommand('spot.Disconnect', cmdSpotDisconnect));
     context.subscriptions.push(commands.registerCommand('spot.Terminate', cmdSpotTerminate));
@@ -86,8 +88,7 @@ function getAzureSubscription(): AzureSubscription | undefined {
     return candidateSubscriptions[0];
 }
 
-function cmdSpotCreate() {
-    reporter.sendTelemetryEvent('onCommand/spotCreate');
+function genericSpotCreate(spotCreatorFn: (sub: AzureSubscription) => Promise<ISpotCreationData>): void {
     reporter.sendTelemetryEvent('spotCreate/initiate');
     const azureSub = getAzureSubscription();
     if (!azureSub) {
@@ -96,7 +97,7 @@ function cmdSpotCreate() {
                                     'spot.reason': 'NO_AZURE_SUBSCRIPTION'});
         return;
     }
-    spotCreate(azureSub)
+    spotCreatorFn(azureSub)
     .then((res: ISpotCreationData) => {
         reporter.sendTelemetryEvent('spotCreate/conclude',
                                     {'spot.result': TelemetryResult.SUCCESS,
@@ -169,8 +170,19 @@ function cmdSpotCreate() {
                                                 'spot.detail.spotRegion': ex.spotCreationData.spotRegion});
         } else {
             console.error(ex.message);
+            window.showErrorMessage(`Unable to create spot: ${ex.message}`);
         }
     });
+}
+
+function cmdSpotCreateFromPr() {
+    reporter.sendTelemetryEvent('onCommand/spotCreateFromPr');
+    genericSpotCreate(spotCreateFromPR);
+}
+
+function cmdSpotCreate() {
+    reporter.sendTelemetryEvent('onCommand/spotCreate');
+    genericSpotCreate(spotCreate);
 }
 
 function connectToSpot(hostname: string, instanceToken: string) {

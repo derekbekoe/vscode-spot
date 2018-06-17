@@ -1,3 +1,6 @@
+## [0.3.7]
+- ACR + ACR Build integration
+
 ## [0.3.6]
 - Resolve failing terminal load after 0.3.4 release.
 

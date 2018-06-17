@@ -33,6 +33,7 @@ export const deploymentTemplateBase = {
         },
         "properties": {
           "containers": [Object()],
+          "imageRegistryCredentials": [],
           "osType": "Linux",
           "restartPolicy": "Never",
           "ipAddress": {
