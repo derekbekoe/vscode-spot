@@ -136,7 +136,7 @@ function genericSpotCreate(spotCreatorFn: (sub: AzureSubscription) => Promise<IS
                            ex.spotCreationData.instanceToken);
             const portalMsgItem: MessageItem = {title: 'Azure Portal'};
             // tslint:disable-next-line:max-line-length
-            window.showErrorMessage(`Spot health check failed for ${ex.spotCreationData.spotName}. Use 'Spot: Connect' to connect later.`, portalMsgItem)
+            window.showErrorMessage(`Spot created successfully but health check failed for ${ex.spotCreationData.spotName}. Use 'Spot: Connect' to connect later.`, portalMsgItem)
             .then((msgItem: MessageItem | undefined) => {
                 if (portalMsgItem === msgItem) {
                     // tslint:disable-next-line:max-line-length
