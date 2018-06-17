@@ -12,8 +12,8 @@ import { openFileEditor, SpotFileTracker } from './spotFiles';
 import { ACIDeleteError, MissingConfigVariablesError, spotTerminate } from './spotTerminate';
 import { SpotTreeDataProvider } from './spotTreeDataProvider';
 import { KnownSpots, SpotSession, SpotSetupError, UserCancelledError } from './spotUtil';
-import { TelemetryReporter, TelemetryResult } from './telemetry';
-import { createTelemetryReporter } from './telemetry';
+import { createTelemetryReporter, TelemetryReporter, TelemetryResult } from './telemetry';
+import { SpotLog } from './logging';
 
 let reporter: TelemetryReporter;
 let spotTreeDataProvider: SpotTreeDataProvider;
@@ -29,6 +29,7 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(statusBarItem);
     spotFileTracker = new SpotFileTracker();
     knownSpots = new KnownSpots();
+    SpotLog.configureOutputChannel();
     // tslint:disable-next-line:max-line-length
     const azureAccountExtension: Extension<AzureAccount> | undefined = extensions.getExtension<AzureAccount>('ms-vscode.azure-account');
     azureAccount = azureAccountExtension ? azureAccountExtension.exports : undefined;
@@ -136,7 +137,7 @@ function genericSpotCreate(spotCreatorFn: (sub: AzureSubscription) => Promise<IS
                            ex.spotCreationData.instanceToken);
             const portalMsgItem: MessageItem = {title: 'Azure Portal'};
             // tslint:disable-next-line:max-line-length
-            window.showErrorMessage(`Spot health check failed for ${ex.spotCreationData.spotName}. Use 'Spot: Connect' to connect later.`, portalMsgItem)
+            window.showErrorMessage(`Spot created successfully but health check failed for ${ex.spotCreationData.spotName}. Use 'Spot: Connect' to connect later.`, portalMsgItem)
             .then((msgItem: MessageItem | undefined) => {
                 if (portalMsgItem === msgItem) {
                     // tslint:disable-next-line:max-line-length
