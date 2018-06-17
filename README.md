@@ -15,7 +15,7 @@ Developer tools are becoming more cloud powered. Spot is a VS Code extension tha
 
 ## Announcements
 - [Spot: Instant cloud environments for developers](https://blog.derekbekoe.com/announcing-spot/)
-- [Spot: June Update (0.4)](https://blog.derekbekoe.com/spot-june-update/)
+- [Spot: June Update](https://blog.derekbekoe.com/spot-june-update/)
 
 ## Getting started
 
