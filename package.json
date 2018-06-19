@@ -1,7 +1,7 @@
 {
     "name": "Spot",
     "description": "Instant cloud environments for developers.",
-    "version": "0.3.7",
+    "version": "0.4.0",
     "publisher": "derek-bekoe",
     "galleryBanner": {
         "color": "#3f51b5",
