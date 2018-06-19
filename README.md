@@ -91,9 +91,10 @@ All configuration options below are optional and should only be used for advance
 | `spot.azureStorageAccountName`    | The storage account name containing the file share.
 | `spot.azureStorageAccountKey` | The storage account key for the storage account.
 | `spot.azureFileShareName1`  | The file share name containing the spot host.
-| `spot.azureRegion` | (optional) The region to deploy spots into. See [region availability](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-quotas#region-availability).
+| `spot.azureRegion` | The region to deploy spots into. See [region availability](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-quotas#region-availability).
 | `spot.azureFileShareName2`  | The file share name you want to mount for persistent storage.
 | `spot.createSpotWithSSLEnabled`  | Create new spots with SSL enabled. This is experimental. Disable this if you are having issues with Let's Encrypt.
+| `spot.fileWatcherWatchPath`  | The file path to watch in the created Spot.
 
 See [User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) on how to set these configuration values in VS Code.
 
