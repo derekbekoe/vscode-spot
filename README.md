@@ -1,3 +1,9 @@
+## :construction: This project has been archived
+
+Read about Cloud Hosted Developer Environments in this blog post - [Intelligent Productivity and Collaboration, from Anywhere](https://devblogs.microsoft.com/visualstudio/intelligent-productivity-and-collaboration-from-anywhere/).
+
+---
+
 # Spot: Instant cloud environments for developers
 
 Developer tools are becoming more cloud powered. Spot is a VS Code extension that provides an integrated terminal, file explorer and editor to any host running [the Spot Host](https://github.com/derekbekoe/spot) with terminal access through the browser also.
